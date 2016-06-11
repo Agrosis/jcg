@@ -1,34 +1,24 @@
 package com.plasmaconduit.json.codegen
 
 import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.{currentMirror => cm}
 
 import treehugger.forest._
-import definitions._
 import treehuggerDSL._
 
 object JsWriterGen {
 
-  case class Model(a: Long, b: String, c: Boolean, d: Map[String, Map[String, Float]], e: Map[String, List[Long]])
-
-  def getJsClassSymbol(typeSignature: ru.Type): Option[treehugger.forest.ClassSymbol] = {
-    if (typeSignature =:= ru.typeOf[Boolean]) {
-      Some(symbols.JsBooleanClass)
-    } else if (typeSignature =:= ru.typeOf[Long]) {
-      Some(symbols.JsLongClass)
-    } else if (typeSignature =:= ru.typeOf[String]) {
-      Some(symbols.JsStringClass)
-    } else if (typeSignature =:= ru.typeOf[Float]) {
-      Some(symbols.JsFloatClass)
-    } else if (typeSignature <:< ru.typeOf[List[_]]) {
-      Some(symbols.JsArrayClass)
-    } else if (typeSignature <:< ru.typeOf[Map[String, _]]) {
-      Some(symbols.JsObjectClass)
-    } else {
-      None
-    }
+  private def getJsClassSymbol(typeSignature: ru.Type): Option[treehugger.forest.ClassSymbol] = typeSignature match {
+    case ts if typeSignature =:= ru.typeOf[Boolean] => Some(symbols.JsBooleanClass)
+    case ts if typeSignature =:= ru.typeOf[Long] => Some(symbols.JsLongClass)
+    case ts if typeSignature =:= ru.typeOf[String] => Some(symbols.JsStringClass)
+    case ts if typeSignature =:= ru.typeOf[Float] => Some(symbols.JsFloatClass)
+    case ts if typeSignature <:< ru.typeOf[List[_]] => Some(symbols.JsArrayClass)
+    case ts if typeSignature <:< ru.typeOf[Map[String, _]] => Some(symbols.JsObjectClass)
+    case _ => None
   }
 
-  def applyMapValuesToJsObjectTree(tree: treehugger.forest.Tree, typeParameter: ru.Type): treehugger.forest.Tree = {
+  private def applyMapValuesToJsObjectTree(tree: treehugger.forest.Tree, typeParameter: ru.Type): treehugger.forest.Tree = {
     getJsClassSymbol(typeParameter) match {
       case Some(symbols.JsObjectClass) => {
         val innerType = typeParameter.asInstanceOf[ru.TypeRefApi].args.drop(1).head
@@ -43,7 +33,7 @@ object JsWriterGen {
     }
   }
 
-  def applyMapToJsArrayTree(tree: treehugger.forest.Tree, typeParameter: ru.Type): treehugger.forest.Tree = {
+  private def applyMapToJsArrayTree(tree: treehugger.forest.Tree, typeParameter: ru.Type): treehugger.forest.Tree = {
     getJsClassSymbol(typeParameter) match {
       case Some(symbols.JsObjectClass) => {
         val innerType = typeParameter.asInstanceOf[ru.TypeRefApi].args.drop(1).head
@@ -58,7 +48,7 @@ object JsWriterGen {
     }
   }
 
-  def getJsValueTypeTree(name: String, typeSignature: ru.Type): treehugger.forest.Tree = {
+  private def getJsValueTypeTree(name: String, typeSignature: ru.Type): treehugger.forest.Tree = {
     getJsClassSymbol(typeSignature) match {
       case Some(symbols.JsObjectClass) => {
         val innerType = typeSignature.asInstanceOf[ru.TypeRefApi].args.drop(1).head
@@ -74,30 +64,19 @@ object JsWriterGen {
   }
 
   def generateJsWriterFor(c: Class[_]): treehugger.forest.Tree = {
-    val className = c.getSimpleName().replace("$", "")
-    
-    BLOCK(
-      IMPORT("com.plasmaconduit.json", "_"),
-      OBJECTDEF(s"${className}JsWriter").withFlags(Flags.IMPLICIT).withParents(symbols.JsWriterType.APPLYTYPE(className)) := BLOCK(
-        DEF("write", symbols.JsValueType).withParams(PARAM("m", className)).withFlags(Flags.OVERRIDE) := BLOCK(
-          LIT(symbols.JsObjectClass).APPLY(
-            ru.typeOf[Model].members.filter(!_.isMethod).map(s => {
-              val name = s.name.toString().trim()
+    val className = c.getSimpleName()
 
-              TUPLE(LIT(name), getJsValueTypeTree(name, s.typeSignature))
-            }).toSeq: _*
-          )
+    OBJECTDEF(s"${className}JsWriter").withFlags(Flags.IMPLICIT).withParents(symbols.JsWriterType.APPLYTYPE(className)) := BLOCK(
+      DEF("write", symbols.JsValueType).withParams(PARAM("m", className)).withFlags(Flags.OVERRIDE) := BLOCK(
+        LIT(symbols.JsObjectClass).APPLY(
+          cm.classSymbol(Class.forName("org.company.app.models.User")).toType.members.filter(!_.isMethod).map(s => {
+            val name = s.name.toString().trim()
+
+            TUPLE(LIT(name), getJsValueTypeTree(name, s.typeSignature))
+          }).toSeq: _*
         )
       )
-    ).inPackage("com.plasmaconduit.app.models")
-  }
-
-  def main(args: Array[String]): Unit = {
-    val tree = generateJsWriterFor(Model.getClass())
-
-    val str = treeToString(tree)
-
-    println(str)
+    )
   }
 
 }
