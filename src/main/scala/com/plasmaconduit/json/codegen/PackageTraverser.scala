@@ -12,23 +12,35 @@ import treehuggerDSL._
 
 object PackageTraverser {
 
-//  def main(args: Array[String]): Unit = {
-//    val classes = getAllClassesInPackage("org.company.app")
-//
-//    println(
-//      treeToString(
-//        BLOCK(
-//          IMPORT("com.plasmaconduit.json._"),
-//          OBJECTDEF("GenJsWriters") := BLOCK(
-//            classes.flatMap(className => processTypeForWriters(Class.forName(className))): _*
-//          )
-//        ).inPackage("json.writers")
-//      )
-//    )
-//  }
+  def main(args: Array[String]): Unit = {
+    val classes = getAllClassesInPackage("org.company.app")
+
+    println(
+      treeToString(
+        BLOCK(
+          IMPORT("com.plasmaconduit.json._"),
+          OBJECTDEF("GenJsWriters") := BLOCK(
+            classes.flatMap(className => processTypeForWriters(Class.forName(className))): _*
+          )
+        ).inPackage("json.writers"),
+        BLOCK(
+          IMPORT("com.plasmaconduit.json._"),
+          IMPORT("com.plasmaconduit.validation._"),
+          OBJECTDEF("GenJsReaders") := BLOCK(
+            classes.flatMap(className => processTypeForReaders(Class.forName(className))): _*
+          )
+        ).inPackage("json.readers")
+      )
+    )
+  }
 
   def processTypeForWriters(clazz: Class[_]): Seq[treehugger.forest.Tree] = cm.classSymbol(clazz).toType match {
     case t if t <:< ru.typeOf[GenWriter] => Seq(JsWriterGen.generateJsWriterFor(clazz))
+    case _ => Seq()
+  }
+
+  def processTypeForReaders(clazz: Class[_]): Seq[treehugger.forest.Tree] = cm.classSymbol(clazz).toType match {
+    case t if t <:< ru.typeOf[GenReader] => Seq(JsReaderGen.generateJsReaderFor(clazz))
     case _ => Seq()
   }
 

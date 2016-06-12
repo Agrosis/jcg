@@ -29,7 +29,7 @@ object JsReaderGen {
       val name = s.name.toString().trim()
 
       Seq(
-        CASEOBJECTDEF(s"$className${name.capitalize}InvalidError").withParents(errorType),
+        CASEOBJECTDEF(s"$className${name.capitalize}InvalidError").withParents(errorType), // TODO: Should grab a JsReader[A] and be a case class
         CASEOBJECTDEF(s"$className${name.capitalize}MissingError").withParents(errorType)
       )
     })
@@ -98,14 +98,6 @@ object JsReaderGen {
 
   private implicit def treeToSeqTree[A <% treehugger.forest.Tree](tree: A): Seq[treehugger.forest.Tree] = {
     Seq(tree)
-  }
-
-  def main(args: Array[String]): Unit = {
-    println(
-      treeToString(
-        generateJsReaderFor(Class.forName("org.company.app.models.User"))
-      )
-    )
   }
 
 }
