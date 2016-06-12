@@ -23,6 +23,7 @@ object Build extends Build {
       scalacOptions         += "-feature",
       scalacOptions         += "-deprecation",
       scalacOptions         += "-unchecked",
+      scalacOptions         += "-language:implicitConversions",
       scalacOptions in Test ++= Seq("-Yrangepos"),
       resolvers             ++= Seq("snapshots", "releases").map(Resolver.sonatypeRepo),
       resolvers             += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",

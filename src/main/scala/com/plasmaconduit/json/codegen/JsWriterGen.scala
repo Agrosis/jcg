@@ -68,8 +68,8 @@ object JsWriterGen {
 
     OBJECTDEF(s"${className}JsWriter").withFlags(Flags.IMPLICIT).withParents(symbols.JsWriterType.APPLYTYPE(className)) := BLOCK(
       DEF("write", symbols.JsValueType).withParams(PARAM("m", className)).withFlags(Flags.OVERRIDE) := BLOCK(
-        LIT(symbols.JsObjectClass).APPLY(
-          cm.classSymbol(Class.forName("org.company.app.models.User")).toType.members.filter(!_.isMethod).map(s => {
+        REF(symbols.JsObjectClass).APPLY(
+          cm.classSymbol(c).toType.members.filter(!_.isMethod).map(s => {
             val name = s.name.toString().trim()
 
             TUPLE(LIT(name), getJsValueTypeTree(name, s.typeSignature))

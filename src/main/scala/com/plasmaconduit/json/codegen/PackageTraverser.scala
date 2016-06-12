@@ -12,20 +12,20 @@ import treehuggerDSL._
 
 object PackageTraverser {
 
-  def main(args: Array[String]): Unit = {
-    val classes = getAllClassesInPackage("org.company.app")
-    
-    println(
-      treeToString(
-        BLOCK(
-          IMPORT("com.plasmaconduit.json._"),
-          OBJECTDEF("GenJsWriters") := BLOCK(
-            classes.flatMap(className => processTypeForWriters(Class.forName(className))): _*
-          )
-        ).inPackage("json.writers")
-      )
-    )
-  }
+//  def main(args: Array[String]): Unit = {
+//    val classes = getAllClassesInPackage("org.company.app")
+//
+//    println(
+//      treeToString(
+//        BLOCK(
+//          IMPORT("com.plasmaconduit.json._"),
+//          OBJECTDEF("GenJsWriters") := BLOCK(
+//            classes.flatMap(className => processTypeForWriters(Class.forName(className))): _*
+//          )
+//        ).inPackage("json.writers")
+//      )
+//    )
+//  }
 
   def processTypeForWriters(clazz: Class[_]): Seq[treehugger.forest.Tree] = cm.classSymbol(clazz).toType match {
     case t if t <:< ru.typeOf[GenWriter] => Seq(JsWriterGen.generateJsWriterFor(clazz))
