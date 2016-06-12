@@ -8,6 +8,8 @@ package object codegen {
 
   object symbols {
 
+    val Map = RootClass.newClass("Map")
+
     def Validation(e: Type, a: Type) = RootClass.newAbstractType("Validation").TYPE_OF(e, a)
     val Success = RootClass.newClass("Success")
     val Failure = RootClass.newClass("Failure")

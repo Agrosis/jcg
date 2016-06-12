@@ -1,79 +1,65 @@
 package com.plasmaconduit.json.codegen
 
-import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.{currentMirror => cm}
-
 import treehugger.forest._
 import treehuggerDSL._
+import definitions._
 
 object JsWriterGen {
 
-  private def getJsClassSymbol(typeSignature: ru.Type): Option[treehugger.forest.ClassSymbol] = typeSignature match {
-    case ts if typeSignature =:= ru.typeOf[Boolean] => Some(symbols.JsBooleanClass)
-    case ts if typeSignature =:= ru.typeOf[Long] => Some(symbols.JsLongClass)
-    case ts if typeSignature =:= ru.typeOf[String] => Some(symbols.JsStringClass)
-    case ts if typeSignature =:= ru.typeOf[Float] => Some(symbols.JsFloatClass)
-    case ts if typeSignature <:< ru.typeOf[List[_]] => Some(symbols.JsArrayClass)
-    case ts if typeSignature <:< ru.typeOf[Map[String, _]] => Some(symbols.JsObjectClass)
-    case _ => None
-  }
-
-  private def applyMapValuesToJsObjectTree(tree: treehugger.forest.Tree, typeParameter: ru.Type): treehugger.forest.Tree = {
-    getJsClassSymbol(typeParameter) match {
-      case Some(symbols.JsObjectClass) => {
-        val innerType = typeParameter.asInstanceOf[ru.TypeRefApi].args.drop(1).head
-        tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsObjectClass.APPLY(applyMapValuesToJsObjectTree(REF("x"), innerType)))
-      }
-      case Some(symbols.JsArrayClass) => {
-        val innerType = typeParameter.asInstanceOf[ru.TypeRefApi].args.head
-        tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsArrayClass.APPLY(applyMapToJsArrayTree(REF("x"), innerType)))
-      }
-      case Some(innerClassSymbol) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (innerClassSymbol.APPLY(REF("x"))))
-      case None => tree
+  private def generateJsObjectMapValues(tree: treehugger.forest.Tree, typeParameter: ModelFieldType): treehugger.forest.Tree = typeParameter match {
+    case ModelFieldType("Map", innerTypeParameters) => {
+      tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsObjectClass.APPLY(generateJsObjectMapValues(REF("x"), innerTypeParameters.drop(1).head)))
     }
-  }
-
-  private def applyMapToJsArrayTree(tree: treehugger.forest.Tree, typeParameter: ru.Type): treehugger.forest.Tree = {
-    getJsClassSymbol(typeParameter) match {
-      case Some(symbols.JsObjectClass) => {
-        val innerType = typeParameter.asInstanceOf[ru.TypeRefApi].args.drop(1).head
-        tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsObjectClass.APPLY(applyMapValuesToJsObjectTree(REF("x"), innerType)))
-      }
-      case Some(symbols.JsArrayClass) => {
-        val innerType = typeParameter.asInstanceOf[ru.TypeRefApi].args.head
-        tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsArrayClass.APPLY(applyMapToJsArrayTree(REF("x"), innerType)))
-      }
-      case Some(innerClassSymbol) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (innerClassSymbol.APPLY(REF("x"))))
-      case None => tree
+    case ModelFieldType("List", innerTypeParameters) => {
+      tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsArrayClass.APPLY(generateJsArrayMap(REF("x"), innerTypeParameters.head)))
     }
+    case ModelFieldType("Long", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsLongClass.APPLY(REF("x"))))
+    case ModelFieldType("String", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsStringClass.APPLY(REF("x"))))
+    case ModelFieldType("Float", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsFloatClass.APPLY(REF("x"))))
+    case ModelFieldType("Boolean", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsBooleanClass.APPLY(REF("x"))))
+    case ModelFieldType(name, _) => tree.DOT("mapValues").APPLYTYPE(symbols.JsValueType).APPLY(LAMBDA(PARAM("x")) ==> REF("x"))
   }
 
-  private def getJsValueTypeTree(name: String, typeSignature: ru.Type): treehugger.forest.Tree = {
-    getJsClassSymbol(typeSignature) match {
-      case Some(symbols.JsObjectClass) => {
-        val innerType = typeSignature.asInstanceOf[ru.TypeRefApi].args.drop(1).head
-        symbols.JsObjectClass.APPLY(applyMapValuesToJsObjectTree(REF("m").DOT(name), innerType))
-      }
-      case Some(symbols.JsArrayClass) => {
-        val innerType = typeSignature.asInstanceOf[ru.TypeRefApi].args.head
-        symbols.JsArrayClass.APPLY(applyMapToJsArrayTree(REF("m").DOT(name), innerType))
-      }
-      case Some(classSymbol) => classSymbol.APPLY(REF("m").DOT(name))
-      case None => REF("m").DOT(name)
+  private def generateJsArrayMap(tree: treehugger.forest.Tree, typeParameter: ModelFieldType): treehugger.forest.Tree = typeParameter match {
+    case ModelFieldType("Map", innerTypeParameters) => {
+      tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsObjectClass.APPLY(generateJsObjectMapValues(REF("x"), innerTypeParameters.drop(1).head)))
     }
+    case ModelFieldType("List", innerTypeParameters) => {
+      tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> symbols.JsArrayClass.APPLY(generateJsArrayMap(REF("x"), innerTypeParameters.head)))
+    }
+    case ModelFieldType("Long", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsLongClass.APPLY(REF("x"))))
+    case ModelFieldType("String", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsStringClass.APPLY(REF("x"))))
+    case ModelFieldType("Float", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsFloatClass.APPLY(REF("x"))))
+    case ModelFieldType("Boolean", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsBooleanClass.APPLY(REF("x"))))
+    case ModelFieldType(name, _) => tree.DOT("map").APPLYTYPE(symbols.JsValueType, ListClass.TYPE_OF(symbols.JsValueType)).APPLY(LAMBDA(PARAM("x")) ==> REF("x"))
   }
 
-  def generateJsWriterFor(c: Class[_]): treehugger.forest.Tree = {
-    val className = c.getSimpleName()
+  def generateModelAssignment(field: ModelField, refName: String): treehugger.forest.Tree = {
+    val fieldName = field.term.value
+    val value: treehugger.forest.Tree = field.fieldType match {
+      case ModelFieldType("Map", typeParameters) => {
+        symbols.JsObjectClass.APPLY(generateJsObjectMapValues(REF("m").DOT(fieldName), typeParameters.drop(1).head))
+      }
+      case ModelFieldType("List", typeParameters) => {
+        symbols.JsArrayClass.APPLY(generateJsArrayMap(REF("m").DOT(fieldName), typeParameters.head))
+      }
+      case ModelFieldType("Long", _) => symbols.JsLongClass.APPLY(REF(refName).DOT(fieldName))
+      case ModelFieldType("String", _) => symbols.JsStringClass.APPLY(REF(refName).DOT(fieldName))
+      case ModelFieldType("Float", _) => symbols.JsFloatClass.APPLY(REF(refName).DOT(fieldName))
+      case ModelFieldType("Boolean", _) => symbols.JsBooleanClass.APPLY(REF(refName).DOT(fieldName))
+      case ModelFieldType(name, _) => REF(refName).DOT(fieldName)
+    }
 
-    OBJECTDEF(s"${className}JsWriter").withFlags(Flags.IMPLICIT).withParents(symbols.JsWriterType.APPLYTYPE(className)) := BLOCK(
-      DEF("write", symbols.JsValueType).withParams(PARAM("m", className)).withFlags(Flags.OVERRIDE) := BLOCK(
+    TUPLE(LIT(field.term.value), value)
+  }
+
+  def generateJsWriterFor(model: Model): treehugger.forest.Tree = {
+    val modelName = model.name.value
+
+    OBJECTDEF(s"${modelName}JsWriter").withFlags(Flags.IMPLICIT).withParents(symbols.JsWriterType.APPLYTYPE(modelName)) := BLOCK(
+      DEF("write", symbols.JsValueType).withParams(PARAM("m", modelName)).withFlags(Flags.OVERRIDE) := BLOCK(
         REF(symbols.JsObjectClass).APPLY(
-          cm.classSymbol(c).toType.members.filter(!_.isMethod).map(s => {
-            val name = s.name.toString().trim()
-
-            TUPLE(LIT(name), getJsValueTypeTree(name, s.typeSignature))
-          }).toSeq: _*
+          model.fields.map(field => generateModelAssignment(field, "m"))
         )
       )
     )
