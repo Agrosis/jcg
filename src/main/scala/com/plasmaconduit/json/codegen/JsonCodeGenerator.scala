@@ -5,19 +5,19 @@ import treehuggerDSL._
 
 object JsonCodeGenerator {
 
-  def processModelForWriter(model: Model): Seq[treehugger.forest.Tree] = {
+  def processModelForWriter(model: Model): List[treehugger.forest.Tree] = {
     if (model.genWriter) {
-      Seq(JsWriterGen.generateJsWriterFor(model))
+      List(JsWriterGen.generateJsWriterFor(model))
     } else {
-      Seq()
+      List()
     }
   }
 
-  def processModelForReader(model: Model): Seq[treehugger.forest.Tree] = {
+  def processModelForReader(model: Model): List[treehugger.forest.Tree] = {
     if (model.genReader) {
-      Seq(JsReaderGen.generateJsReaderFor(model))
+      List(JsReaderGen.generateJsReaderFor(model))
     } else {
-      Seq()
+      List()
     }
   }
 
@@ -34,7 +34,12 @@ object JsonCodeGenerator {
           OBJECTDEF("GenJsWriters") := BLOCK(
             models.flatMap(processModelForWriter)
           )
-        ).inPackage("json.writers"),
+        ).inPackage("json.writers")
+      )
+    )
+
+    println(
+      treehugger.forest.treeToString(
         BLOCK(
           IMPORT("com.plasmaconduit.json._"),
           IMPORT("com.plasmaconduit.validation._"),

@@ -2,7 +2,6 @@ package com.plasmaconduit.json.codegen
 
 import treehugger.forest._
 import treehuggerDSL._
-import definitions._
 
 object JsWriterGen {
 
@@ -17,7 +16,7 @@ object JsWriterGen {
     case ModelFieldType("String", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsStringClass.APPLY(REF("x"))))
     case ModelFieldType("Float", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsFloatClass.APPLY(REF("x"))))
     case ModelFieldType("Boolean", _) => tree.DOT("mapValues").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsBooleanClass.APPLY(REF("x"))))
-    case ModelFieldType(name, _) => tree.DOT("mapValues").APPLYTYPE(symbols.JsValueType).APPLY(LAMBDA(PARAM("x")) ==> REF("x"))
+    case ModelFieldType(name, _) => tree
   }
 
   private def generateJsArrayMap(tree: treehugger.forest.Tree, typeParameter: ModelFieldType): treehugger.forest.Tree = typeParameter match {
@@ -31,7 +30,7 @@ object JsWriterGen {
     case ModelFieldType("String", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsStringClass.APPLY(REF("x"))))
     case ModelFieldType("Float", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsFloatClass.APPLY(REF("x"))))
     case ModelFieldType("Boolean", _) => tree.DOT("map").APPLY(LAMBDA(PARAM("x")) ==> (symbols.JsBooleanClass.APPLY(REF("x"))))
-    case ModelFieldType(name, _) => tree.DOT("map").APPLYTYPE(symbols.JsValueType, ListClass.TYPE_OF(symbols.JsValueType)).APPLY(LAMBDA(PARAM("x")) ==> REF("x"))
+    case ModelFieldType(name, _) => tree
   }
 
   def generateModelAssignment(field: ModelField, refName: String): treehugger.forest.Tree = {

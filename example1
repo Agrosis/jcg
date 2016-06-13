@@ -1,0 +1,24 @@
+Block(
+  List(
+    Import(Select(Select(Select(Ident(TermName("com")), TermName("plasmaconduit")), TermName("json")), TermName("codegen")), List(ImportSelector(TermName("GenReader"), 73, TermName("GenReader"), 73), ImportSelector(TermName("GenWriter"), 84, TermName("GenWriter"), 84))),
+    ClassDef(
+      Modifiers(CASE),
+      TypeName("User"),
+      List(),
+      Template(
+        List(Ident(TypeName("GenWriter")), Ident(TypeName("GenReader")), Select(Ident(scala), TypeName("Product")), Select(Ident(scala), TypeName("Serializable"))),
+        noSelfType,
+        List(
+          ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("id"), Ident(TypeName("Long")), EmptyTree),
+          ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("email"), Ident(TypeName("String")), EmptyTree),
+          ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("password"), Ident(TypeName("String")), EmptyTree),
+          ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("username"), Ident(TypeName("String")), EmptyTree),
+          ValDef(Modifiers(CASEACCESSOR | PARAMACCESSOR), TermName("i"), AppliedTypeTree(Ident(TypeName("List")), List(AppliedTypeTree(Ident(TypeName("List")), List(Ident(TypeName("String")))))), EmptyTree),
+          DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List(ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("id"), Ident(TypeName("Long")), EmptyTree), ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("email"), Ident(TypeName("String")), EmptyTree), ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("password"), Ident(TypeName("String")), EmptyTree), ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("username"), Ident(TypeName("String")), EmptyTree), ValDef(Modifiers(PARAM | PARAMACCESSOR), TermName("i"), AppliedTypeTree(Ident(TypeName("List")), List(AppliedTypeTree(Ident(TypeName("List")), List(Ident(TypeName("String")))))), EmptyTree))), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))),
+          ValDef(Modifiers(OVERRIDE), TermName("ignoreFields"), AppliedTypeTree(Ident(TypeName("Seq")), List(Ident(TypeName("String")))), Apply(Ident(TermName("Seq")), List(Literal(Constant("password")))))
+        )
+      )
+    )
+  ),
+  Literal(Constant(()))
+)

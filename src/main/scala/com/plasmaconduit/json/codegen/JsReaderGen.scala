@@ -16,7 +16,7 @@ object JsReaderGen {
     case ModelFieldType(typeName, _) => RootClass.newClass(typeName)
   }
 
-  private def generateFieldErrors(className: String, fields: Seq[ModelField], errorType: treehugger.forest.Symbol): Seq[treehugger.forest.Tree] = {
+  private def generateFieldErrors(className: String, fields: List[ModelField], errorType: treehugger.forest.Symbol): List[treehugger.forest.Tree] = {
     fields.flatMap(f => {
       Seq(
         CASEOBJECTDEF(s"$className${f.term.value.capitalize}InvalidError").withParents(errorType), // TODO: Should grab a JsReader[A] and be a case class
@@ -25,7 +25,7 @@ object JsReaderGen {
     })
   }
 
-  private def generateFieldExtractors(className: String, fields: Seq[ModelField], errorType: treehugger.forest.Symbol): Seq[treehugger.forest.Tree] = {
+  private def generateFieldExtractors(className: String, fields: List[ModelField], errorType: treehugger.forest.Symbol): List[treehugger.forest.Tree] = {
     fields.map(f => {
       val modelType = getClassType(f.fieldType)
 
@@ -37,11 +37,11 @@ object JsReaderGen {
     })
   }
 
-  private def generateForComprehensionAssignments(fields: Seq[ModelField]): Seq[treehugger.forest.ForValFrom] = {
+  private def generateForComprehensionAssignments(fields: List[ModelField]): List[treehugger.forest.ForValFrom] = {
     fields.map(f => VALFROM(f.term.value) := REF(f.term.value + "Extractor").APPLY(REF("map")))
   }
 
-  private def generateModelAssignments(fields: Seq[ModelField]): Seq[treehugger.forest.Tree] = {
+  private def generateModelAssignments(fields: List[ModelField]): List[treehugger.forest.Tree] = {
     fields.map(f => REF(f.term.value) := REF(f.term.value))
   }
 
