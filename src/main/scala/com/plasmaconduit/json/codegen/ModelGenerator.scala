@@ -6,6 +6,7 @@ import scala.tools.reflect.ToolBox
 
 object ModelGenerator {
 
+  @annotation.tailrec
   private def checkIfParentExists(parents: List[Tree], parent: String): Boolean = parents match {
     case x :: xs => x match {
       case Ident(TypeName(name)) if name == parent => true
@@ -49,11 +50,14 @@ object ModelGenerator {
 
   def generateModelsFor(code: String): List[Model] = {
     val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
-    val ast = tb.parse(code)
+    try {
+      val ast = tb.parse(code)
+      traverseForModels(ast)
+    } catch {
+      case e: Throwable => List()
+    }
 
-    println(showRaw(ast))
-
-    traverseForModels(ast)
+//    println(showRaw(ast))
   }
 
 }

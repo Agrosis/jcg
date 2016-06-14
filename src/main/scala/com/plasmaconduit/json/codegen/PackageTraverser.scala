@@ -4,8 +4,8 @@ import java.io.File
 
 object PackageTraverser {
 
-  def getAllClassesInPackage(packageName: String): List[File] = {
-    val directory = s"src/main/scala/${packageName.replaceAll("\\.", "/")}"
+  def getAllClassesInPackage(baseDirectory: String, packageName: String): List[File] = {
+    val directory = s"$baseDirectory/src/main/scala/${packageName.replaceAll("\\.", "/")}"
     traverse(new File(directory))
   }
 

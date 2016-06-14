@@ -16,7 +16,7 @@ object JsReaderGen {
     case ModelFieldType(typeName, _) => RootClass.newClass(typeName)
   }
 
-  private def generateFieldErrors(className: String, fields: List[ModelField], errorType: treehugger.forest.Symbol): List[treehugger.forest.Tree] = {
+  private def generateFieldErrors(className: String, fields: List[ModelField], errorType: treehugger.forest.Symbol): Seq[treehugger.forest.Tree] = {
     fields.flatMap(f => {
       Seq(
         CASEOBJECTDEF(s"$className${f.term.value.capitalize}InvalidError").withParents(errorType), // TODO: Should grab a JsReader[A] and be a case class
@@ -51,7 +51,7 @@ object JsReaderGen {
     val modelClass = RootClass.newClass(modelName)
     val modelJsReaderError = RootClass.newAbstractType(s"${modelName}JsReaderError")
 
-    OBJECTDEF(s"${modelName}JsReader").withFlags(Flags.IMPLICIT).withParents(symbols.JsReaderType.APPLYTYPE(modelName)) := BLOCK(
+    OBJECTDEF(s"${modelName}JsReader").withParents(symbols.JsReaderType.APPLYTYPE(modelName)) := BLOCK(
       combine(
         TYPEVAR(symbols.JsReaderFailureAliasType)/*.withFlags(Flags.OVERRIDE)*/ := REF(modelJsReaderError),
         TRAITDEF(modelJsReaderError).withFlags(Flags.SEALED),
