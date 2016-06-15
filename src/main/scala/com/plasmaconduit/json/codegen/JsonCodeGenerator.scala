@@ -48,7 +48,12 @@ object JsonCodeGenerator {
     val path = "."
     val models = PackageTraverser.getAllClassesInPackage(path, "org.company").flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
-      ModelGen.generateModelsFor(code)
+      val models = ModelGen.generateModelsFor(code)
+
+      println(s"Visiting ${file.getAbsolutePath}...")
+      println(s"Found ${models.length} models...")
+
+      models
     })
 
     val termPackageMap = models.map(m => (m.name.value, m.getFullyQualifiedName)).toMap
