@@ -1,4 +1,4 @@
-package com.plasmaconduit.json.codegen
+package com.plasmaconduit.json.codegen.traits
 
 sealed trait Gen
 

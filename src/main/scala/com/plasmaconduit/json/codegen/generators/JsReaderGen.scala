@@ -1,7 +1,7 @@
-package com.plasmaconduit.json.codegen
+package com.plasmaconduit.json.codegen.generators
 
+import com.plasmaconduit.json.codegen._
 import treehugger.forest._
-import treehuggerDSL._
 import definitions._
 
 class JsReaderGen(termPackageMap: Map[String, String]) {

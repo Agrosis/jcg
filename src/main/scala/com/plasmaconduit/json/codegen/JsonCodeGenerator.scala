@@ -2,6 +2,7 @@ package com.plasmaconduit.json.codegen
 
 import java.io.{File, PrintWriter}
 
+import com.plasmaconduit.json.codegen.generators.{JsWriterGen, JsReaderGen}
 import treehugger.forest._
 import treehuggerDSL._
 
@@ -47,7 +48,7 @@ object JsonCodeGenerator {
     val path = "."
     val models = PackageTraverser.getAllClassesInPackage(path, "org.company.app.models").flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
-      ModelGenerator.generateModelsFor(code)
+      ModelGen.generateModelsFor(code)
     })
 
     val termPackageMap = models.map(m => (m.name.value, m.getFullyQualifiedName)).toMap
