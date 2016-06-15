@@ -27,7 +27,7 @@ object JsonCodeGenerator {
   }
 
   def generateJsReaderImplicit(model: Model): List[treehugger.forest.Tree] = {
-    if (model.genWriter) {
+    if (model.genReader) {
       List(
         VAL(s"${model.name.value}JsReaderImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsReader")
       )
@@ -46,7 +46,7 @@ object JsonCodeGenerator {
 
   def main(args: Array[String]): Unit = {
     val path = "."
-    val models = PackageTraverser.getAllClassesInPackage(path, "org.company.app.models").flatMap(file => {
+    val models = PackageTraverser.getAllClassesInPackage(path, "org.company").flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
       ModelGen.generateModelsFor(code)
     })

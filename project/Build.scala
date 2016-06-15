@@ -12,7 +12,7 @@ object Build extends Build {
     repository in bintray          := "releases"
   )
 
-  val root = Project("root", file("."))
+  lazy val root = Project("root", file("."))
     //.settings(customBintraySettings: _*)
     .settings(
       name                  := "json-codegen",
@@ -27,13 +27,14 @@ object Build extends Build {
       scalacOptions in Test ++= Seq("-Yrangepos"),
       resolvers             ++= Seq("snapshots", "releases").map(Resolver.sonatypeRepo),
       resolvers             += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
-      libraryDependencies   += "com.plasmaconduit" %% "json" % "0.21.0",
+      libraryDependencies   += "com.plasmaconduit" %% "json" % "0.22.0",
       libraryDependencies   += "com.eed3si9n" %% "treehugger" % "0.4.1",
       libraryDependencies   += "org.scala-lang" % "scala-reflect" % "2.11.8",
       libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
     )
+    .dependsOn(traits)
 
-  val traits = Project("traits", file("./traits"))
+  lazy val traits = Project("traits", file("./traits"))
     .settings(customBintraySettings: _*)
     .settings(
       name                  := "json-codegen-traits",

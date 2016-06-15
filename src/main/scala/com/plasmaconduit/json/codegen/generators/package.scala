@@ -1,10 +1,10 @@
-package com.plasmaconduit.json
+package com.plasmaconduit.json.codegen
 
 import treehugger.forest._
 import definitions._
 import treehuggerDSL._
 
-package object codegen {
+package object generators {
 
   object symbols {
 

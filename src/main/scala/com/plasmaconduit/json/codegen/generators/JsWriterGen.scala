@@ -1,6 +1,9 @@
 package com.plasmaconduit.json.codegen.generators
 
-import com.plasmaconduit.json.codegen.{Model, ModelParameter, ModelParameterType, symbols}
+import com.plasmaconduit.json.codegen.{Model, ModelParameter, ModelParameterType}
+
+import treehugger.forest._
+import treehuggerDSL._
 import treehugger.forest._
 
 object JsWriterGen {

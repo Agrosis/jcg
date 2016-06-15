@@ -56,8 +56,8 @@ object ModelGen {
       case Block(body, expr) => {
         body.flatMap(childAst => traverseForModels(childAst, packageName))
       }
-      case ModuleDef(modifiers, termName, Template(parents, self, body)) => {
-        body.flatMap(childAst => traverseForModels(childAst, packageName))
+      case ModuleDef(modifiers, TermName(objectName), Template(parents, self, body)) => {
+        body.flatMap(childAst => traverseForModels(childAst, s"$packageName.$objectName"))
       }
       case ClassDef(modifiers, TypeName(name), typeDef, Template(parents, self, body)) => {
         List(
@@ -78,17 +78,20 @@ object ModelGen {
   def generateModelsFor(code: String): List[Model] = {
     val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
 
-    val packageName = "^(\\s+)?package (.*)".r.findFirstIn(code).map(_.split(" ")(1)).get // TODO: Fix
-
-    try {
-      val ast = tb.parse(code.replaceFirst("^(\\s+)?package", "//package"))
-//      println(showRaw(ast))
-      traverseForModels(ast, packageName)
-    } catch {
-      case e: Throwable => {
-        println(e)
-        List()
+    "^(\\s+)?package (.*)".r.findFirstIn(code).map(_.split(" ")(1)) match {
+      case Some(packageName) => {
+        try {
+          val ast = tb.parse(code.replaceFirst("^(\\s+)?package", "//package"))
+          // println(showRaw(ast))
+          traverseForModels(ast, packageName)
+        } catch {
+          case e: Throwable => {
+            println(e)
+            List()
+          }
+        }
       }
+      case None => List()
     }
   }
 
