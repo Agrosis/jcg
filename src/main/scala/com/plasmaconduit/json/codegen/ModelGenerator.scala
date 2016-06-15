@@ -4,7 +4,7 @@ import scala.reflect.runtime.universe._
 
 import scala.tools.reflect.ToolBox
 
-object ModelGen {
+object ModelGenerator {
 
   @annotation.tailrec
   private def parentExists(parents: List[Tree], parent: String): Boolean = parents match {

@@ -1,5 +1,5 @@
-json-codegen
-============
+jcg
+===
 
 Motivation
 ----------
@@ -50,7 +50,7 @@ Instead of falling back to reflection on-the-fly to serialize/deserialize to and
 or a `JsReader` can be directly inferred from the names and types of the parameters of a model. Therefore, given a Scala AST of a model, we can automatically generate code for them
 to do the job.
 
-`json-codegen` scans your Scala codebase for models and generates code (`JsWriters` and `JsReaders`) and dumps it to a directory of your choice.
+`jcg` scans your Scala codebase for models and generates code (`JsWriters` and `JsReaders`) and dumps it to a directory of your choice.
 
 
 Install
@@ -65,7 +65,7 @@ libraryDependencies += "com.plasmaconduit" %% "json-codegen-traits" % "0.2.0"
 Usage
 -----
 
-First, specify the models for which you want to generate a `JsReader` or `JsWriter`:
+First, specify the models for which you want to generate a `JsReader` or `JsWriter` by extending the `GenReader` or `GenWriter` trait:
 
 ```scala
 import com.plasmaconduit.json.codegen.traits.{GenReader, GenWriter}
@@ -77,9 +77,14 @@ final case class Item(id: Int, name: String) extends GenReader with GenWriter
 final case class PhoneNumber(value: String) extends GenReader
 ```
 
-Run the tool and generate code.
+Run the tool in your root directory to generate all the code you didn't have to write!
+
+`java -classpath "vendor/jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator ./src/main/scala json`
+
+This will recursively find models in the package `org.company.app` create a package `json` with the generated code.
 
 TODO
 ----
 * Find a good way to run the tool.
 * Implement reader/writer generators for sealed traits.
+* Insert comments/warnings about stuff.

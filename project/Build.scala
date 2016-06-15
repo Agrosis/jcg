@@ -15,7 +15,7 @@ object Build extends Build {
   lazy val root = Project("root", file("."))
     //.settings(customBintraySettings: _*)
     .settings(
-      name                  := "json-codegen",
+      name                  := "jcg",
       organization          := "com.plasmaconduit",
       version               := "0.1.0",
       scalaVersion          := "2.11.8",
@@ -37,9 +37,9 @@ object Build extends Build {
   lazy val traits = Project("traits", file("./traits"))
     .settings(customBintraySettings: _*)
     .settings(
-      name                  := "json-codegen-traits",
+      name                  := "jcg-traits",
       organization          := "com.plasmaconduit",
-      version               := "0.1.0",
+      version               := "0.2.0",
       crossScalaVersions    := Seq("2.10.4", "2.11.8"),
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",

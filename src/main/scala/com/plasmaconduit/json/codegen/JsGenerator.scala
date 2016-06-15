@@ -6,7 +6,7 @@ import com.plasmaconduit.json.codegen.generators.{JsWriterGen, JsReaderGen}
 import treehugger.forest._
 import treehuggerDSL._
 
-object JsonCodeGenerator {
+object JsGenerator {
 
   def generateJsWriterImplicit(model: Model): treehugger.forest.Tree = {
     VAL(s"${model.name.value}JsWriterImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsWriter")
@@ -28,7 +28,7 @@ object JsonCodeGenerator {
     val path = "."
     val models = PackageTraverser.getAllClassesInPackage(path, "org.company").flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
-      val models = ModelGen.generateModelsFor(code)
+      val models = ModelGenerator.generateModelsFor(code)
 
       println(s"Visiting ${file.getAbsolutePath}...")
       println(s"Found ${models.length} models...")
