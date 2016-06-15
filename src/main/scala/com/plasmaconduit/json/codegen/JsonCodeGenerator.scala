@@ -36,7 +36,7 @@ object JsonCodeGenerator {
       models
     })
 
-    val termPackageMap = models.map(m => (m.name.value, m.getFullyQualifiedName)).toMap
+    val termPackageMap = models.map(m => (m.name.value, m.fullyQualifiedName)).toMap
     val writers = models.filter(_.genWriter)
     val readers = models.filter(_.genReader)
 

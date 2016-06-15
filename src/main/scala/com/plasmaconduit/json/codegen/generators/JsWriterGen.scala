@@ -58,10 +58,10 @@ object JsWriterGen {
   def generateJsWriterFor(model: Model): treehugger.forest.Tree = {
     val modelName = model.name.value
 
-    OBJECTDEF(s"${modelName}JsWriter").withParents(symbols.JsWriterType.APPLYTYPE(model.getFullyQualifiedName)) := BLOCK(
-      DEF("write", symbols.JsValueType).withParams(PARAM("m", model.getFullyQualifiedName)).withFlags(Flags.OVERRIDE) := BLOCK(
+    OBJECTDEF(s"${modelName}JsWriter").withParents(symbols.JsWriterType.APPLYTYPE(model.fullyQualifiedName)) := BLOCK(
+      DEF("write", symbols.JsValueType).withParams(PARAM("m", model.fullyQualifiedName)).withFlags(Flags.OVERRIDE) := BLOCK(
         REF(symbols.JsObjectClass).APPLY(
-          model.parameters.map(field => generateModelAssignment(field, "m"))
+          model.writerParameters.map(field => generateModelAssignment(field, "m"))
         )
       )
     )

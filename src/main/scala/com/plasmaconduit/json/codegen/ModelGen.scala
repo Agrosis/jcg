@@ -7,10 +7,10 @@ import scala.tools.reflect.ToolBox
 object ModelGen {
 
   @annotation.tailrec
-  private def checkIfParentExists(parents: List[Tree], parent: String): Boolean = parents match {
+  private def parentExists(parents: List[Tree], parent: String): Boolean = parents match {
     case x :: xs => x match {
       case Ident(TypeName(name)) if name == parent => true
-      case _ => checkIfParentExists(xs, parent)
+      case _ => parentExists(xs, parent)
     }
     case Nil => false
   }
@@ -22,15 +22,32 @@ object ModelGen {
     }
   }
 
-  private def getFields(ast: List[Tree]): List[ModelParameter] = ast match {
+  private def getParameters(ast: List[Tree]): List[ModelParameter] = ast match {
     case ValDef(modifiers, TermName(termName), Ident(TypeName(typeName)), eq) :: xs if modifiers.hasFlag(Flag.CASEACCESSOR) => {
-      ModelParameter(ModelParameterTerm(termName), ModelParameterType(typeName, List())) :: getFields(xs)
+      ModelParameter(ModelParameterTerm(termName), ModelParameterType(typeName, List())) :: getParameters(xs)
     }
     case ValDef(modifiers, TermName(termName), AppliedTypeTree(Ident(TypeName(typeName)), typeParameters), eq) :: xs if modifiers.hasFlag(Flag.CASEACCESSOR) => {
-      ModelParameter(ModelParameterTerm(termName), ModelParameterType(typeName, getTypeParameters(typeParameters))) :: getFields(xs)
+      ModelParameter(ModelParameterTerm(termName), ModelParameterType(typeName, getTypeParameters(typeParameters))) :: getParameters(xs)
     }
-    case x :: xs => getFields(xs)
+    case x :: xs => getParameters(xs)
     case Nil => Nil
+  }
+
+  private def getIgnoreParameters(ast: List[Tree]): List[String] = {
+    def extractLiterals(l: List[Tree]): List[String] = {
+      l.flatMap {
+        case Literal(Constant(name: String)) => List(name)
+        case _ => List()
+      }
+    }
+
+    ast match {
+      case ValDef(modifiers, TermName("writerIgnoreParameters"), typeTree, Apply(Ident(TermName("List")), values)) :: xs if modifiers.hasFlag(Flag.OVERRIDE) => {
+        extractLiterals(values)
+      }
+      case x :: xs => getIgnoreParameters(xs)
+      case Nil => Nil
+    }
   }
 
   private def getDefaultParameters(ast: List[Tree]): Map[String, Any] = {
@@ -59,15 +76,16 @@ object ModelGen {
       case ModuleDef(modifiers, TermName(objectName), Template(parents, self, body)) => {
         body.flatMap(childAst => traverseForModels(childAst, s"$packageName.$objectName"))
       }
-      case ClassDef(modifiers, TypeName(name), typeDef, Template(parents, self, body)) => {
+      case ClassDef(modifiers, TypeName(name), typeDef, Template(parents, self, body)) if parentExists(parents, "GenReader") || parentExists(parents, "GenWriter") => {
         List(
           Model(
             ModelName(name),
             ModelPackage(packageName),
-            getFields(body),
+            getParameters(body),
             ModelDefaultParameterValues(getDefaultParameters(body)),
-            checkIfParentExists(parents, "GenReader"),
-            checkIfParentExists(parents, "GenWriter")
+            ModelIgnoreParameters(getIgnoreParameters(body)),
+            parentExists(parents, "GenReader"),
+            parentExists(parents, "GenWriter")
           )
         )
       }
@@ -82,7 +100,7 @@ object ModelGen {
       case Some(packageName) => {
         try {
           val ast = tb.parse(code.replaceFirst("^(\\s+)?package", "//package"))
-          // println(showRaw(ast))
+//          println(showRaw(ast))
           traverseForModels(ast, packageName)
         } catch {
           case e: Throwable => {

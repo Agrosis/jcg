@@ -62,10 +62,10 @@ class JsReaderGen(termPackageMap: Map[String, String]) {
   def generateJsReaderFor(model: Model): treehugger.forest.Tree = {
     val modelName = model.name.value
 
-    val modelClass = RootClass.newClass(model.getFullyQualifiedName)
+    val modelClass = RootClass.newClass(model.fullyQualifiedName)
     val modelJsReaderError = RootClass.newAbstractType(s"${modelName}JsReaderError")
 
-    OBJECTDEF(s"${modelName}JsReader").withParents(symbols.JsReaderType.APPLYTYPE(model.getFullyQualifiedName)) := BLOCK(
+    OBJECTDEF(s"${modelName}JsReader").withParents(symbols.JsReaderType.APPLYTYPE(model.fullyQualifiedName)) := BLOCK(
       combine(
         TYPEVAR(symbols.JsReaderFailureAliasType)/*.withFlags(Flags.OVERRIDE)*/ := REF(modelJsReaderError),
         TRAITDEF(modelJsReaderError).withFlags(Flags.SEALED),
