@@ -8,40 +8,20 @@ import treehuggerDSL._
 
 object JsonCodeGenerator {
 
-  def generateJsWriterImplicit(model: Model): List[treehugger.forest.Tree] = {
-    if (model.genWriter) {
-      List(
-        VAL(s"${model.name.value}JsWriterImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsWriter")
-      )
-    } else {
-      List()
-    }
+  def generateJsWriterImplicit(model: Model): treehugger.forest.Tree = {
+    VAL(s"${model.name.value}JsWriterImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsWriter")
   }
 
-  def generateJsWriter(model: Model): List[treehugger.forest.Tree] = {
-    if (model.genWriter) {
-      List(JsWriterGen.generateJsWriterFor(model))
-    } else {
-      List()
-    }
+  def generateJsWriter(model: Model): treehugger.forest.Tree = {
+    JsWriterGen.generateJsWriterFor(model)
   }
 
-  def generateJsReaderImplicit(model: Model): List[treehugger.forest.Tree] = {
-    if (model.genReader) {
-      List(
-        VAL(s"${model.name.value}JsReaderImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsReader")
-      )
-    } else {
-      List()
-    }
+  def generateJsReaderImplicit(model: Model): treehugger.forest.Tree = {
+    VAL(s"${model.name.value}JsReaderImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsReader")
   }
 
-  def generateJsReader(model: Model, termPackageMap: Map[String, String]): List[treehugger.forest.Tree] = {
-    if (model.genReader) {
-      List(new JsReaderGen(termPackageMap).generateJsReaderFor(model))
-    } else {
-      List()
-    }
+  def generateJsReader(model: Model, termPackageMap: Map[String, String]): treehugger.forest.Tree = {
+    new JsReaderGen(termPackageMap).generateJsReaderFor(model)
   }
 
   def main(args: Array[String]): Unit = {
@@ -57,13 +37,15 @@ object JsonCodeGenerator {
     })
 
     val termPackageMap = models.map(m => (m.name.value, m.getFullyQualifiedName)).toMap
+    val writers = models.filter(_.genWriter)
+    val readers = models.filter(_.genReader)
 
     val genJsWriters = treehugger.forest.treeToString(
       BLOCK(
         IMPORT("com.plasmaconduit.json._"),
         OBJECTDEF("GenJsWriters") := BLOCK(
-          models.flatMap(generateJsWriterImplicit) ++
-          models.flatMap(generateJsWriter)
+          writers.map(generateJsWriterImplicit) ++
+          writers.map(generateJsWriter)
         )
       ).inPackage("json.writers")
     )
@@ -73,8 +55,8 @@ object JsonCodeGenerator {
         IMPORT("com.plasmaconduit.json._"),
         IMPORT("com.plasmaconduit.validation._"),
         OBJECTDEF("GenJsReaders") := BLOCK(
-          models.flatMap(generateJsReaderImplicit) ++
-          models.flatMap(m => generateJsReader(m, termPackageMap))
+          readers.map(generateJsReaderImplicit) ++
+          readers.map(m => generateJsReader(m, termPackageMap))
         )
       ).inPackage("json.readers")
     )
