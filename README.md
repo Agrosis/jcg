@@ -59,7 +59,7 @@ Install
 Add the following to your `Build.scala`
 ```
 resolvers += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
-libraryDependencies += "com.plasmaconduit" %% "json-codegen-traits" % "0.2.0"
+libraryDependencies += "com.plasmaconduit" %% "jcg-traits" % "0.2.0"
 ```
 
 Usage
@@ -77,11 +77,35 @@ final case class Item(id: Int, name: String) extends GenReader with GenWriter
 final case class PhoneNumber(value: String) extends GenReader
 ```
 
-Run the tool in your root directory to generate all the code you didn't have to write!
+NOTE: Ideally, all your models specified for generation should form a closed set (excluding the basic Js types defined in `json`).
+If you define your own `JsReader` or `JsWriter` for a model manually (that is used in another model), the imports have to be resolved manually.
+This may or may not be an issue in the future depending on how much code analysis we want `jcg` to do.
 
-`java -classpath "vendor/jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator ./src/main/scala json`
+Run the tool in your root directory to generate all the code you don't have to write anymore!
 
-This will recursively find models in the package `org.company.app` create a package `json` with the generated code.
+```
+java -classpath "vendor/jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator ./src/main/scala json
+```
+
+This will recursively find models in the package `org.company.app` create a package `json` with the generated code. Now, you can use
+the readers and writers wherever you'd like!
+
+```scala
+import json.writers.GenJsWriters._
+import json.readers.GenJsReaders._
+
+val user: User = ...
+
+val js = JsObject(
+  "user" -> user
+)
+
+val inputItem: JsValue = ...
+
+val item: Validation[ItemJsReaderError, Item] = inputItem.as[Item]
+```
+
+The implicits will automatically be resolved in the generated code files.
 
 TODO
 ----
