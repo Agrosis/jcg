@@ -18,7 +18,7 @@ object Build extends Build {
       name                  := "json-codegen",
       organization          := "com.plasmaconduit",
       version               := "0.1.0",
-      scalaVersion          := "2.11.2",
+      scalaVersion          := "2.11.8",
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",
       scalacOptions         += "-deprecation",
