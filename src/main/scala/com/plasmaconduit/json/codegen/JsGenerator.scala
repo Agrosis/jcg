@@ -26,13 +26,17 @@ object JsGenerator {
   }
 
   def main(args: Array[String]): Unit = {
+    if (args.length < 4) {
+      println("Not enough arguments.")
+      System.exit(0)
+    }
+
     val rootDir = args(0) // .
     val sourceDir = args(1) // src/main/scala/
     val searchPackage = args(2) // org.company
     val outputPackage = args(3) // json
     val outputPackagePath = packageToPath(outputPackage)
 
-    val path = "."
     val models = PackageTraverser.getAllClassesInPackage(rootDir, sourceDir, searchPackage).flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
       val models = ModelGenerator.generateModelsFor(code)
@@ -71,17 +75,17 @@ object JsGenerator {
 //    println(genJsWriters)
 //    println(genJsReaders)
 
-    val writersDir = new File(path / sourceDir / outputPackagePath / "writers")
+    val writersDir = new File(rootDir / sourceDir / outputPackagePath / "writers")
     if (!writersDir.exists()) writersDir.mkdirs()
 
-    val jsWritersWriter = new PrintWriter(new File(path / sourceDir / outputPackagePath / "writers" + "GenJsWriters.scala"))
+    val jsWritersWriter = new PrintWriter(new File(rootDir / sourceDir / outputPackagePath / "writers" + "GenJsWriters.scala"))
     jsWritersWriter.write(genJsWriters)
     jsWritersWriter.close()
 
-    val readersDir = new File(path / sourceDir / outputPackagePath / "readers")
+    val readersDir = new File(rootDir / sourceDir / outputPackagePath / "readers")
     if (!readersDir.exists()) readersDir.mkdirs()
 
-    val jsReadersWriter = new PrintWriter(new File(path / sourceDir / outputPackagePath / "readers" + "GenJsReaders.scala"))
+    val jsReadersWriter = new PrintWriter(new File(rootDir / sourceDir / outputPackagePath / "readers" + "GenJsReaders.scala"))
     jsReadersWriter.write(genJsReaders)
     jsReadersWriter.close()
   }

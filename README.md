@@ -59,7 +59,7 @@ Install
 Add the following to your `Build.scala`
 ```
 resolvers += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
-libraryDependencies += "com.plasmaconduit" %% "jcg-traits" % "0.2.0"
+libraryDependencies += "com.plasmaconduit" %% "jcg-traits" % "0.3.0"
 ```
 
 Usage
@@ -84,7 +84,7 @@ This may or may not be an issue in the future depending on how much code analysi
 Run the tool in your root directory to generate all the code you don't have to write anymore!
 
 ```
-java -classpath "vendor/jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator ./src/main/scala json
+java -cp "jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator /Users/mahsan/Desktop/Projects/Libraries/Scala/jcg/examples src/main/scala org.company.app json
 ```
 
 This will recursively find models in the package `org.company.app` create a package `json` with the generated code. Now, you can use

@@ -13,7 +13,6 @@ object Build extends Build {
   )
 
   lazy val root = Project("root", file("."))
-    //.settings(customBintraySettings: _*)
     .settings(
       name                  := "jcg",
       organization          := "com.plasmaconduit",
@@ -29,17 +28,15 @@ object Build extends Build {
       resolvers             += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
       libraryDependencies   += "com.plasmaconduit" %% "json" % "0.23.0",
       libraryDependencies   += "com.eed3si9n" %% "treehugger" % "0.4.1",
-      libraryDependencies   += "org.scala-lang" % "scala-reflect" % "2.11.8",
       libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
     )
-    .dependsOn(traits)
 
   lazy val traits = Project("traits", file("./traits"))
     .settings(customBintraySettings: _*)
     .settings(
       name                  := "jcg-traits",
       organization          := "com.plasmaconduit",
-      version               := "0.2.0",
+      version               := "0.3.0",
       crossScalaVersions    := Seq("2.10.4", "2.11.8"),
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",
@@ -48,5 +45,21 @@ object Build extends Build {
       scalacOptions in Test ++= Seq("-Yrangepos"),
       libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
     )
+
+  lazy val examples = Project("examples", file("./examples"))
+    .settings(
+      name                  := "jcg-examples",
+      organization          := "com.plasmaconduit",
+      version               := "0.1.0",
+      scalaVersion          := "2.11.8",
+      licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
+      scalacOptions         += "-feature",
+      scalacOptions         += "-deprecation",
+      scalacOptions         += "-unchecked",
+      scalacOptions in Test ++= Seq("-Yrangepos"),
+      libraryDependencies   += "com.plasmaconduit" %% "json" % "0.23.0",
+      libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
+    )
+    .dependsOn(traits)
 
 }
