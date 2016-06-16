@@ -70,7 +70,7 @@ First, specify the models for which you want to generate a `JsReader` or `JsWrit
 ```scala
 import com.plasmaconduit.json.codegen.traits.{GenReader, GenWriter}
 
-final case class User(id: Int, username: String, password: String, email: String) extends GenWriter
+final case class User(id: Int, username: String, password: String, email: String, items: List[Item]) extends GenWriter
 
 final case class Item(id: Int, name: String) extends GenReader with GenWriter
 
@@ -84,7 +84,7 @@ This may or may not be an issue in the future depending on how much code analysi
 Run the tool in your root directory to generate all the code you don't have to write anymore!
 
 ```
-java -cp "jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator /Users/mahsan/Desktop/Projects/Libraries/Scala/jcg/examples src/main/scala org.company.app json
+java -cp "jcg-0.1.0.jar:." com.plasmaconduit.json.codegen.JsGenerator /path/to/jcg/examples src/main/scala org.company.app json
 ```
 
 This will recursively find models in the package `org.company.app` create a package `json` with the generated code. Now, you can use
@@ -96,12 +96,14 @@ import json.readers.GenJsReaders._
 
 val user: User = ...
 
+// implicit for JsWriter[User] is automatically resolved
 val js = JsObject(
   "user" -> user
 )
 
 val inputItem: JsValue = ...
 
+// implicit for JsReader[Item] is automatically resolved
 val item: Validation[ItemJsReaderError, Item] = inputItem.as[Item]
 ```
 
@@ -109,6 +111,5 @@ The implicits will automatically be resolved in the generated code files.
 
 TODO
 ----
-* Find a good way to run the tool.
 * Implement reader/writer generators for sealed traits.
 * Insert comments/warnings about stuff.
