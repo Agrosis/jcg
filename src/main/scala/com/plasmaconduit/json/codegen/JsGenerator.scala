@@ -3,6 +3,7 @@ package com.plasmaconduit.json.codegen
 import java.io.{File, PrintWriter}
 
 import com.plasmaconduit.json.codegen.generators.{JsWriterGen, JsReaderGen}
+import com.plasmaconduit.json.codegen.utils.Path._
 import treehugger.forest._
 import treehuggerDSL._
 
@@ -25,8 +26,14 @@ object JsGenerator {
   }
 
   def main(args: Array[String]): Unit = {
+    val rootDir = args(0) // .
+    val sourceDir = args(1) // src/main/scala/
+    val searchPackage = args(2) // org.company
+    val outputPackage = args(3) // json
+    val outputPackagePath = packageToPath(outputPackage)
+
     val path = "."
-    val models = PackageTraverser.getAllClassesInPackage(path, "org.company").flatMap(file => {
+    val models = PackageTraverser.getAllClassesInPackage(rootDir, sourceDir, searchPackage).flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
       val models = ModelGenerator.generateModelsFor(code)
 
@@ -47,7 +54,7 @@ object JsGenerator {
           writers.map(generateJsWriterImplicit) ++
           writers.map(generateJsWriter)
         )
-      ).inPackage("json.writers")
+      ).inPackage("$outputPackage.writers")
     )
 
     val genJsReaders = treehugger.forest.treeToString(
@@ -58,23 +65,23 @@ object JsGenerator {
           readers.map(generateJsReaderImplicit) ++
           readers.map(m => generateJsReader(m, termPackageMap))
         )
-      ).inPackage("json.readers")
+      ).inPackage(s"$outputPackage.readers")
     )
 
 //    println(genJsWriters)
 //    println(genJsReaders)
 
-    val writersDir = new File(s"$path/src/main/scala/json/writers/")
+    val writersDir = new File(path / sourceDir / outputPackagePath / "writers")
     if (!writersDir.exists()) writersDir.mkdirs()
 
-    val jsWritersWriter = new PrintWriter(new File(s"$path/src/main/scala/json/writers/GenJsWriters.scala"))
+    val jsWritersWriter = new PrintWriter(new File(path / sourceDir / outputPackagePath / "writers" + "GenJsWriters.scala"))
     jsWritersWriter.write(genJsWriters)
     jsWritersWriter.close()
 
-    val readersDir = new File(s"$path/src/main/scala/json/readers/")
+    val readersDir = new File(path / sourceDir / outputPackagePath / "readers")
     if (!readersDir.exists()) readersDir.mkdirs()
 
-    val jsReadersWriter = new PrintWriter(new File(s"$path/src/main/scala/json/readers/GenJsReaders.scala"))
+    val jsReadersWriter = new PrintWriter(new File(path / sourceDir / outputPackagePath / "readers" + "GenJsReaders.scala"))
     jsReadersWriter.write(genJsReaders)
     jsReadersWriter.close()
   }

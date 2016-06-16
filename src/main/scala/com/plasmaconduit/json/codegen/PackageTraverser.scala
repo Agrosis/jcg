@@ -2,11 +2,13 @@ package com.plasmaconduit.json.codegen
 
 import java.io.File
 
+import com.plasmaconduit.json.codegen.utils.Path
+import com.plasmaconduit.json.codegen.utils.Path._
+
 object PackageTraverser {
 
-  def getAllClassesInPackage(baseDirectory: String, packageName: String): List[File] = {
-    val directory = s"$baseDirectory/src/main/scala/${packageName.replaceAll("\\.", "/")}"
-    traverse(new File(directory))
+  def getAllClassesInPackage(baseDirectory: Path, sourceDir: Path, packageName: String): List[File] = {
+    traverse(new File(baseDirectory / sourceDir / packageToPath(packageName)))
   }
 
   private def traverse(file: File): List[File] = {
