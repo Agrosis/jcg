@@ -27,7 +27,7 @@ object JsGenerator {
 
   def main(args: Array[String]): Unit = {
     if (args.length < 4) {
-      println("Not enough arguments.")
+      println("Arguments: [ROOT_DIRECTORY] [SOURCES_DIRECTORY] [MODELS_PACKAGE] [OUTPUT_PACKAGE]")
       System.exit(0)
     }
 
@@ -71,9 +71,6 @@ object JsGenerator {
         )
       ).inPackage(s"$outputPackage.readers")
     )
-
-//    println(genJsWriters)
-//    println(genJsReaders)
 
     val writersDir = new File(rootDir / sourceDir / outputPackagePath / "writers")
     if (!writersDir.exists()) writersDir.mkdirs()

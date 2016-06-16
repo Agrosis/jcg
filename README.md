@@ -1,6 +1,8 @@
 jcg
 ===
 
+`jcg` is a library that automatically generates `JsWriters` and `JsReaders` from `json` for your models.
+
 Motivation
 ----------
 
