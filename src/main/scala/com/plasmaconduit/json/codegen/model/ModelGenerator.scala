@@ -68,7 +68,7 @@ object ModelGenerator {
         Some(ModelParameterRep)
       }
       case x :: xs => getRep(xs, termName)
-      case Nil => None
+      case Nil => Some(ModelObjectRep(List())) // TODO: Look at parent's field
     }
   }
 
