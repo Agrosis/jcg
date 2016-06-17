@@ -67,16 +67,17 @@ libraryDependencies += "com.plasmaconduit" %% "jcg-traits" % "0.3.0"
 Usage
 -----
 
-First, specify the models for which you want to generate a `JsReader` or `JsWriter` by extending the `GenReader` or `GenWriter` trait:
+First, specify the models for which you want to generate a `JsReader` or `JsWriter` by extending the `GenReader` or `GenWriter` trait and choose
+a reader and writer representation (more on this later).
 
 ```scala
-import com.plasmaconduit.json.codegen.traits.{GenReader, GenWriter}
+import com.plasmaconduit.json.codegen.traits._
 
 final case class User(id: Int, username: String, password: String, email: String, items: List[Item]) extends GenWriter
 
 final case class Item(id: Int, name: String) extends GenReader with GenWriter
 
-final case class PhoneNumber(value: String) extends GenReader
+final case class PhoneNumber(value: String) extends GenReader with GenWriter
 ```
 
 NOTE: Ideally, all your models specified for generation should form a closed set (excluding the basic Js types defined in `json`).
@@ -110,6 +111,32 @@ val item: Validation[ItemJsReaderError, Item] = inputItem.as[Item]
 ```
 
 The implicits will automatically be resolved in the generated code files.
+
+Representations
+---------------
+
+### GenObjectRep ###
+
+The default representation `jcg` uses for a reader or a writer is `GenObjectRep()`, which treats the model solely as an JSON object. This is
+reasonable to have when we have a model with multiple fields, like `User`. You can specify fields to ignore by passing in a List of field names to ignore.
+
+```scala
+final case class User(id: Int, username: String, password: String, email: String, items: List[Item]) extends GenWriter {
+  val writerRep = GenWriterRep(List("password"))
+}
+```
+
+### GenParameterRep ###
+
+In some cases, we have a single field model that only acts as a wrapper model, like `PhoneNumber`. With `GenParameterRep`, we can choose to delegate the model
+representation to the sole parameter, so the model itself is not represented as a JSON object, but as a JSON string, for example.
+
+```scala
+final case class PhoneNumber(value: String) extends GenReader with GenWriter {
+  val readerRep = GenParameterRep
+  val writerRep = GenParameterRep
+}
+```
 
 TODO
 ----
