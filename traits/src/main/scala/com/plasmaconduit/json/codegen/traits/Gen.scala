@@ -3,6 +3,9 @@ package com.plasmaconduit.json.codegen.traits
 sealed trait Gen
 
 trait GenWriter extends Gen {
-  val writerIgnoreParameters: List[String] = List()
+  val writerRep: GenRep
 }
-trait GenReader extends Gen
+
+trait GenReader extends Gen {
+  val readerRep: GenRep
+}

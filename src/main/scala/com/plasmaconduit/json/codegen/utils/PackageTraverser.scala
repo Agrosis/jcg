@@ -1,8 +1,7 @@
-package com.plasmaconduit.json.codegen
+package com.plasmaconduit.json.codegen.utils
 
 import java.io.File
 
-import com.plasmaconduit.json.codegen.utils.Path
 import com.plasmaconduit.json.codegen.utils.Path._
 
 object PackageTraverser {

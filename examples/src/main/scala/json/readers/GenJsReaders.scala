@@ -33,18 +33,9 @@ object GenJsReaders {
   object PhoneNumberJsReader extends JsReader[org.company.app.PhoneNumber] {
     type JsReaderFailure = PhoneNumberJsReaderError
     sealed trait PhoneNumberJsReaderError
-    case object PhoneNumberNotJsonObject extends PhoneNumberJsReaderError
-    case object PhoneNumberValueInvalidError extends PhoneNumberJsReaderError
-    case object PhoneNumberValueMissingError extends PhoneNumberJsReaderError
-    val valueExtractor = JsonObjectValueExtractor[String, PhoneNumberJsReaderError](key = "value", missing = PhoneNumberValueMissingError, invalid = _ => PhoneNumberValueInvalidError, default = None)
+    case object PhoneNumberInvalidJsonType extends PhoneNumberJsReaderError
     override def read(value: JsValue): Validation[PhoneNumberJsReaderError, org.company.app.PhoneNumber] = {
-      value match {
-        case JsObject(map) => {
-          for (value <- valueExtractor(map))
-            yield org.company.app.PhoneNumber(value = value)
-        }
-        case _ => Failure(PhoneNumberNotJsonObject)
-      }
+      value.as[String].mapError(_ => PhoneNumberInvalidJsonType).map(x => org.company.app.PhoneNumber(x))
     }
   }
   object UserJsReader extends JsReader[org.company.app.User] {
@@ -55,12 +46,15 @@ object GenJsReaders {
     case object UserIdMissingError extends UserJsReaderError
     case object UserUsernameInvalidError extends UserJsReaderError
     case object UserUsernameMissingError extends UserJsReaderError
+    case object UserPasswordInvalidError extends UserJsReaderError
+    case object UserPasswordMissingError extends UserJsReaderError
     case object UserEmailInvalidError extends UserJsReaderError
     case object UserEmailMissingError extends UserJsReaderError
     case object UserItemsInvalidError extends UserJsReaderError
     case object UserItemsMissingError extends UserJsReaderError
     val idExtractor = JsonObjectValueExtractor[Int, UserJsReaderError](key = "id", missing = UserIdMissingError, invalid = _ => UserIdInvalidError, default = None)
     val usernameExtractor = JsonObjectValueExtractor[String, UserJsReaderError](key = "username", missing = UserUsernameMissingError, invalid = _ => UserUsernameInvalidError, default = None)
+    val passwordExtractor = JsonObjectValueExtractor[String, UserJsReaderError](key = "password", missing = UserPasswordMissingError, invalid = _ => UserPasswordInvalidError, default = None)
     val emailExtractor = JsonObjectValueExtractor[String, UserJsReaderError](key = "email", missing = UserEmailMissingError, invalid = _ => UserEmailInvalidError, default = None)
     val itemsExtractor = JsonObjectValueExtractor[List[org.company.app.Item], UserJsReaderError](key = "items", missing = UserItemsMissingError, invalid = _ => UserItemsInvalidError, default = None)
     override def read(value: JsValue): Validation[UserJsReaderError, org.company.app.User] = {
@@ -69,9 +63,10 @@ object GenJsReaders {
           for {
             id <- idExtractor(map)
             username <- usernameExtractor(map)
+            password <- passwordExtractor(map)
             email <- emailExtractor(map)
             items <- itemsExtractor(map)
-          } yield org.company.app.User(id = id, username = username, email = email, items = items)
+          } yield org.company.app.User(id = id, username = username, password = password, email = email, items = items)
         }
         case _ => Failure(UserNotJsonObject)
       }

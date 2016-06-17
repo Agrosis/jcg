@@ -2,7 +2,9 @@ package com.plasmaconduit.json.codegen
 
 import java.io.{File, PrintWriter}
 
-import com.plasmaconduit.json.codegen.generators.{JsWriterGen, JsReaderGen}
+import com.plasmaconduit.json.codegen.gen.{JsWriterGen, JsReaderGen}
+import com.plasmaconduit.json.codegen.model.{ModelParameterRep, ModelObjectRep, ModelGenerator, Model}
+import com.plasmaconduit.json.codegen.utils.PackageTraverser
 import com.plasmaconduit.json.codegen.utils.Path._
 import treehugger.forest._
 import treehuggerDSL._
@@ -14,7 +16,11 @@ object JsGenerator {
   }
 
   def generateJsWriter(model: Model): treehugger.forest.Tree = {
-    JsWriterGen.generateJsWriterFor(model)
+    model.genWriterRep match {
+      case Some(ModelObjectRep(ignore)) => JsWriterGen.JsWriterObjectRepGen(ignore).generate(model)
+      case Some(ModelParameterRep) => JsWriterGen.JsWriterParameterRepGen().generate(model)
+      case None => EmptyTree
+    }
   }
 
   def generateJsReaderImplicit(model: Model): treehugger.forest.Tree = {
@@ -22,7 +28,11 @@ object JsGenerator {
   }
 
   def generateJsReader(model: Model, termPackageMap: Map[String, String]): treehugger.forest.Tree = {
-    new JsReaderGen(termPackageMap).generateJsReaderFor(model)
+    model.genWriterRep match {
+      case Some(ModelObjectRep(ignore)) => JsReaderGen.JsReaderObjectRepGen(termPackageMap).generate(model)
+      case Some(ModelParameterRep) => JsReaderGen.JsReaderParameterRepGen(termPackageMap).generate(model)
+      case None => EmptyTree
+    }
   }
 
   def main(args: Array[String]): Unit = {
@@ -48,8 +58,8 @@ object JsGenerator {
     })
 
     val termPackageMap = models.map(m => (m.name.value, m.fullyQualifiedName)).toMap
-    val writers = models.filter(_.genWriter)
-    val readers = models.filter(_.genReader)
+    val writers = models.filter(_.genWriterRep.isDefined)
+    val readers = models.filter(_.genReaderRep.isDefined)
 
     val genJsWriters = treehugger.forest.treeToString(
       BLOCK(
@@ -58,7 +68,7 @@ object JsGenerator {
           writers.map(generateJsWriterImplicit) ++
           writers.map(generateJsWriter)
         )
-      ).inPackage("$outputPackage.writers")
+      ).inPackage(s"$outputPackage.writers")
     )
 
     val genJsReaders = treehugger.forest.treeToString(

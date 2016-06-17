@@ -1,7 +1,6 @@
-package com.plasmaconduit.json.codegen
+package com.plasmaconduit.json.codegen.model
 
 import scala.reflect.runtime.universe._
-
 import scala.tools.reflect.ToolBox
 
 object ModelGenerator {
@@ -33,23 +32,6 @@ object ModelGenerator {
     case Nil => Nil
   }
 
-  private def getIgnoreParameters(ast: List[Tree]): List[String] = {
-    def extractLiterals(l: List[Tree]): List[String] = {
-      l.flatMap {
-        case Literal(Constant(name: String)) => List(name)
-        case _ => List()
-      }
-    }
-
-    ast match {
-      case ValDef(modifiers, TermName("writerIgnoreParameters"), typeTree, Apply(Ident(TermName("List")), values)) :: xs if modifiers.hasFlag(Flag.OVERRIDE) => {
-        extractLiterals(values)
-      }
-      case x :: xs => getIgnoreParameters(xs)
-      case Nil => Nil
-    }
-  }
-
   private def getDefaultParameters(ast: List[Tree]): Map[String, Any] = {
     def find(defs: List[ValDef]): List[(String, Any)] = defs match {
       case ValDef(modifiers, TermName(termName), typeName, Literal(Constant(defaultValue))) :: xs if modifiers.hasFlag(Flag.DEFAULTPARAM) => {
@@ -68,6 +50,28 @@ object ModelGenerator {
     }
   }
 
+  private def getRep(ast: List[Tree], termName: String): Option[ModelRep] = {
+    def extractLiterals(list: List[Tree]): List[String] = list match {
+      case Literal(Constant(x: String)) :: xs => x :: extractLiterals(xs)
+      case x :: xs => extractLiterals(xs)
+      case Nil => Nil
+    }
+
+    ast match {
+      case ValDef(modifiers, TermName(t), typeTree, Apply(Ident(TermName("GenObjectRep")), List())) :: xs if t == termName => {
+        Some(ModelObjectRep(List()))
+      }
+      case ValDef(modifiers, TermName(t), typeTree, Apply(Ident(TermName("GenObjectRep")), List(Apply(Ident(TermName("List")), literals)))) :: xs if t == termName => {
+        Some(ModelObjectRep(extractLiterals(literals)))
+      }
+      case ValDef(modifiers, TermName(t), typeTree, Ident(TermName("GenParameterRep"))) :: xs if t == termName => {
+        Some(ModelParameterRep)
+      }
+      case x :: xs => getRep(xs, termName)
+      case Nil => None
+    }
+  }
+
   private def traverseForModels(ast: Tree, packageName: String): List[Model] = {
     ast match {
       case Block(body, expr) => {
@@ -83,9 +87,8 @@ object ModelGenerator {
             ModelPackage(packageName),
             getParameters(body),
             ModelDefaultParameterValues(getDefaultParameters(body)),
-            ModelIgnoreParameters(getIgnoreParameters(body)),
-            parentExists(parents, "GenReader"),
-            parentExists(parents, "GenWriter")
+            if (parentExists(parents, "GenReader")) getRep(body, "readerRep") else None,
+            if (parentExists(parents, "GenWriter")) getRep(body, "writerRep") else None
           )
         )
       }

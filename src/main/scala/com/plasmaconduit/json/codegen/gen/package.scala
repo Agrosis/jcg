@@ -4,7 +4,7 @@ import treehugger.forest._
 import definitions._
 import treehuggerDSL._
 
-package object generators {
+package object gen {
 
   object symbols {
 

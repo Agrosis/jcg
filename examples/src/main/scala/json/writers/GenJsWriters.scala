@@ -1,4 +1,4 @@
-package $outputPackage.writers
+package json.writers
 
 import com.plasmaconduit.json._
 
@@ -13,7 +13,7 @@ object GenJsWriters {
   }
   object PhoneNumberJsWriter extends JsWriter[org.company.app.PhoneNumber] {
     override def write(m: org.company.app.PhoneNumber): JsValue = {
-      JsObject(("value", JsString(m.value)))
+      JsString(m.value)
     }
   }
   object UserJsWriter extends JsWriter[org.company.app.User] {
