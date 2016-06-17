@@ -28,7 +28,7 @@ object JsGenerator {
   }
 
   def generateJsReader(model: Model, termPackageMap: Map[String, String]): treehugger.forest.Tree = {
-    model.genWriterRep match {
+    model.genReaderRep match {
       case Some(ModelObjectRep(ignore)) => JsReaderGen.JsReaderObjectRepGen(termPackageMap).generate(model)
       case Some(ModelParameterRep) => JsReaderGen.JsReaderParameterRepGen(termPackageMap).generate(model)
       case None => EmptyTree
