@@ -128,8 +128,8 @@ final case class User(id: Int, username: String, password: String, email: String
 
 ### GenParameterRep ###
 
-In some cases, we have a single field model that only acts as a wrapper model, like `PhoneNumber`. With `GenParameterRep`, we can choose to delegate the model
-representation to the sole parameter, so the model itself is not represented as a JSON object, but as a JSON string, for example.
+In some cases, we have a single field model that only acts as a wrapper model, like `PhoneNumber`, which wraps a `String`. With `GenParameterRep`, we can choose
+to delegate the model representation to the parameter, so the model itself is not represented as a JSON object, but as a JSON string, for example.
 
 ```scala
 final case class PhoneNumber(value: String) extends GenReader with GenWriter {
@@ -137,6 +137,10 @@ final case class PhoneNumber(value: String) extends GenReader with GenWriter {
   val writerRep = GenParameterRep
 }
 ```
+
+A `PhoneNumber` will be correctly serialized and deserialized to and from a `JsString`.
+
+IMPORTANT: `GenParameterRep` should only be used on models with single fields. Otherwise, `GenObjectRep` should always be used.
 
 TODO
 ----
