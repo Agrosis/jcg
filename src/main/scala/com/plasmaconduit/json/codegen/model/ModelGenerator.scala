@@ -103,6 +103,7 @@ object ModelGenerator {
       case Some(packageName) => {
         try {
           val ast = tb.parse(code.replaceFirst("^(\\s+)?package", "//package"))
+
 //          println(showRaw(ast))
           traverseForModels(ast, packageName)
         } catch {
