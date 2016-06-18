@@ -12,7 +12,7 @@ import treehuggerDSL._
 object JsGenerator {
 
   def generateJsWriterImplicit(model: Model): treehugger.forest.Tree = {
-    VAL(s"${model.name.value}JsWriterImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsWriter")
+    VAL(s"${model.name.value}JsWriterImplicit").withFlags(Flags.IMPLICIT, Flags.LAZY) := REF(s"${model.name.value}JsWriter")
   }
 
   def generateJsWriter(model: Model): treehugger.forest.Tree = {
@@ -24,7 +24,7 @@ object JsGenerator {
   }
 
   def generateJsReaderImplicit(model: Model): treehugger.forest.Tree = {
-    VAL(s"${model.name.value}JsReaderImplicit").withFlags(Flags.IMPLICIT) := REF(s"${model.name.value}JsReader")
+    VAL(s"${model.name.value}JsReaderImplicit").withFlags(Flags.IMPLICIT, Flags.LAZY) := REF(s"${model.name.value}JsReader")
   }
 
   def generateJsReader(model: Model, termPackageMap: Map[String, String]): treehugger.forest.Tree = {
