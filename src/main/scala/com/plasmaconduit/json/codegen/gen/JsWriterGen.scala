@@ -17,7 +17,7 @@ object JsWriterGen {
         List(
           Function(
             List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(Ident(TermName("x")), innerTypeParameters.drop(1).head)))
+            generateJsObjectMapValues(Ident(TermName("x")), innerTypeParameters.drop(1).head)
           )
         )
       )
@@ -28,7 +28,7 @@ object JsWriterGen {
         List(
           Function(
             List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(Ident(TermName("x")), innerTypeParameters.head)))
+            generateJsArrayMap(Ident(TermName("x")), innerTypeParameters.head)
           )
         )
       )
@@ -67,18 +67,18 @@ object JsWriterGen {
         List(
           Function(
             List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(Ident(TermName("x")), innerTypeParameters.drop(1).head)))
+            generateJsObjectMapValues(Ident(TermName("x")), innerTypeParameters.drop(1).head)
           )
         )
       )
     }
     case ModelParameterType("List", innerTypeParameters) => {
       Apply(
-        Select(tree, TermName("mapValues")),
+        Select(tree, TermName("map")),
         List(
           Function(
             List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(Ident(TermName("x")), innerTypeParameters.head)))
+            generateJsArrayMap(Ident(TermName("x")), innerTypeParameters.head)
           )
         )
       )
@@ -115,16 +115,16 @@ object JsWriterGen {
       val fieldName = field.term.value
       val value: Tree = field.parameterType match {
         case ModelParameterType("Map", typeParameters) => {
-          Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.drop(1).head)))
+          generateJsObjectMapValues(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.drop(1).head)
         }
         case ModelParameterType("List", typeParameters) => {
-          Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.head)))
+          generateJsArrayMap(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.head)
         }
         case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
         case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
         case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
         case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType(name, _) => Ident(TermName(refName))
+        case ModelParameterType(name, _) => Select(Ident(TermName(refName)), TermName(fieldName))
       }
 
       Apply(Select(Ident(TermName("scala")), TermName("Tuple2")), List(Literal(Constant(field.term.value)), value))

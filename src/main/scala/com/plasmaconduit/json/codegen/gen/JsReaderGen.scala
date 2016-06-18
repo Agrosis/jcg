@@ -2,100 +2,147 @@ package com.plasmaconduit.json.codegen.gen
 
 import com.plasmaconduit.json.codegen.model.{ModelDefaultParameterValues, ModelParameterType, ModelParameter, Model}
 
-import treehugger.forest._
-import treehuggerDSL._
-import definitions._
+import scala.reflect.runtime.universe._
 
 sealed trait JsReaderGen {
-  def generate(model: Model): treehugger.forest.Tree
+  def generate(model: Model): Tree
 }
 
 object JsReaderGen {
 
-  private def combine(trees: Seq[treehugger.forest.Tree]*): Seq[treehugger.forest.Tree] = {
-    trees.foldLeft(Seq[treehugger.forest.Tree]())((b, a) => b ++ a)
+  private def combine(trees: List[Tree]*): List[Tree] = {
+    trees.foldLeft(List[Tree]())((b, a) => b ++ a)
   }
 
-  private implicit def treeToSeqTree[A <% treehugger.forest.Tree](tree: A): Seq[treehugger.forest.Tree] = {
-    Seq(tree)
+  private implicit def treeToListTree[A <% Tree](tree: A): List[Tree] = {
+    List(tree)
+  }
+
+  private def getClassType(fieldType: ModelParameterType, termPackageMap: Map[String, String]): Tree = fieldType match {
+    case ModelParameterType("Map", innerTypeParameters) => {
+      TypeApply(Ident(TermName("Map")), List(getClassType(innerTypeParameters.head, termPackageMap: Map[String, String]), getClassType(innerTypeParameters.drop(1).head, termPackageMap: Map[String, String])))
+    }
+    case ModelParameterType("List", innerTypeParameters) => {
+      TypeApply(Ident(TermName("List")), List(getClassType(innerTypeParameters.head, termPackageMap: Map[String, String])))
+    }
+    case ModelParameterType("Long", _) => Ident(TermName("Long"))
+    case ModelParameterType("String", _) => Ident(TermName("String"))
+    case ModelParameterType("Float", _) => Ident(TermName("Float"))
+    case ModelParameterType("Boolean", _) => Ident(TermName("Boolean"))
+    case ModelParameterType(typeName, _) => {
+      termPackageMap.get(typeName) match {
+        case Some(fullyQualified) => Ident(TermName(fullyQualified))
+        case None => Ident(TermName(typeName))
+      }
+    }
   }
 
   def JsReaderObjectRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
-    private def getClassType(fieldType: ModelParameterType): treehugger.forest.Type = fieldType match {
-      case ModelParameterType("Map", innerTypeParameters) => symbols.Map.TYPE_OF(getClassType(innerTypeParameters.head), getClassType(innerTypeParameters.drop(1).head))
-      case ModelParameterType("List", innerTypeParameters) => ListClass.TYPE_OF(getClassType(innerTypeParameters.head))
-      case ModelParameterType("Long", _) => LongClass
-      case ModelParameterType("String", _) => StringClass
-      case ModelParameterType("Float", _) => FloatClass
-      case ModelParameterType("Boolean", _) => BooleanClass
-      case ModelParameterType(typeName, _) => {
-        termPackageMap.get(typeName) match {
-          case Some(fullyQualified) => RootClass.newClass(fullyQualified)
-          case None => RootClass.newClass(typeName)
-        }
-      }
-    }
-
-    private def generateFieldErrors(className: String, fields: List[ModelParameter], errorType: treehugger.forest.Symbol): Seq[treehugger.forest.Tree] = {
+    private def generateFieldErrors(className: String, fields: List[ModelParameter], errorType: Ident): List[Tree] = {
       fields.flatMap(f => {
         Seq(
-          CASEOBJECTDEF(s"$className${f.term.value.capitalize}InvalidError").withParents(errorType), // TODO: Should grab a JsReader[A] and be a case class
-          CASEOBJECTDEF(s"$className${f.term.value.capitalize}MissingError").withParents(errorType)
+          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.value.capitalize}InvalidError"), Template(List(errorType), noSelfType, List())), // TODO: Should grab a JsReader[A] and be a case class
+          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.value.capitalize}MissingError"), Template(List(errorType), noSelfType, List()))
         )
       })
     }
 
-    private def generateDefaultValue(parameter: ModelParameter, defaultValues: ModelDefaultParameterValues): treehugger.forest.Tree = {
+    private def generateDefaultValue(parameter: ModelParameter, defaultValues: ModelDefaultParameterValues): Tree = {
       defaultValues.map.get(parameter.term.value) match {
-        case Some(value) => SomeClass.APPLY(LIT(value))
-        case None => NONE
+        case Some(value) => Apply(Ident(TermName("Some")), List(Literal(Constant(value))))
+        case None => Ident(TermName("None"))
       }
     }
 
-    private def generateFieldExtractors(className: String, fields: List[ModelParameter], defaultValues: ModelDefaultParameterValues, errorType: treehugger.forest.Symbol): List[treehugger.forest.Tree] = {
+    private def generateFieldExtractors(className: String, fields: List[ModelParameter], defaultValues: ModelDefaultParameterValues, errorType: Ident): List[Tree] = {
       fields.map(f => {
-        val modelType: treehugger.forest.Type = getClassType(f.parameterType)
+        val modelType = getClassType(f.parameterType, termPackageMap)
 
-        VAL(s"${f.term.value}Extractor") := symbols.JsonObjectValueExtractorFunction(modelType, errorType).APPLY(
-          REF("key") := LIT(f.term.value),
-          REF("missing") := REF(s"$className${f.term.value.capitalize}MissingError"),
-          REF("invalid") := LAMBDA(PARAM(WILDCARD)) ==> REF(s"$className${f.term.value.capitalize}InvalidError"),
-          REF("default") := generateDefaultValue(f, defaultValues)
+        ValDef(
+          Modifiers(),
+          TermName(s"${f.term.value}Extractor"),
+          TypeTree(),
+          Apply(
+            TypeApply(Ident(TermName("JsonObjectValueExtractor")), List(modelType, errorType)),
+            List(
+              AssignOrNamedArg(Ident(TermName("key")), Literal(Constant(f.term.value))),
+              AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"$className${f.term.value.capitalize}MissingError"))),
+              AssignOrNamedArg(Ident(TermName("invalid")), Function(
+                List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
+                Ident(TermName(s"$className${f.term.value.capitalize}InvalidError"))
+              )),
+              AssignOrNamedArg(Ident(TermName("default")), generateDefaultValue(f, defaultValues))
+            )
+          )
         )
       })
     }
 
-    private def generateForComprehensionAssignments(fields: List[ModelParameter]): List[treehugger.forest.ForValFrom] = {
-      fields.map(f => VALFROM(f.term.value) := REF(f.term.value + "Extractor").APPLY(REF("map")))
+    private def generateModelMap(fields: List[ModelParameter], inner: Tree): Tree = fields match {
+      case f :: fs => {
+        val method = if (fs == Nil) "map" else "flatMap"
+        Apply(
+          Select(
+            Apply(Ident(TermName(s"${f.term.value}Extractor")), List(Ident(TermName("map")))),
+            TermName(method)
+          ),
+          List(
+            Function(
+              List(ValDef(Modifiers(Flag.PARAM), TermName(f.term.value), TypeTree(), EmptyTree)),
+              generateModelMap(fs, inner)
+            )
+          )
+        )
+      }
+      case Nil => inner
     }
 
-    private def generateModelAssignments(fields: List[ModelParameter]): List[treehugger.forest.Tree] = {
-      fields.map(f => REF(f.term.value) := REF(f.term.value))
+    private def generateModelAssignments(fields: List[ModelParameter]): List[AssignOrNamedArg] = {
+      fields.map(f => AssignOrNamedArg(Ident(TermName(f.term.value)), Ident(TermName(f.term.value))))
     }
 
-    def generate(model: Model): treehugger.forest.Tree = {
+    def generate(model: Model): Tree = {
       val modelName = model.name.value
 
-      val modelClass = RootClass.newClass(model.fullyQualifiedName)
-      val modelJsReaderError = RootClass.newAbstractType(s"${modelName}JsReaderError")
+      val modelClass = Ident(TermName(model.fullyQualifiedName))
+      val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
 
-      OBJECTDEF(s"${modelName}JsReader").withParents(symbols.JsReaderType.APPLYTYPE(model.fullyQualifiedName)) := BLOCK(
-        combine(
-          TYPEVAR(symbols.JsReaderFailureAliasType) := REF(modelJsReaderError),
-          TRAITDEF(modelJsReaderError).withFlags(Flags.SEALED),
-          CASEOBJECTDEF(s"${modelName}NotJsonObject").withParents(modelJsReaderError),
+      ModuleDef(
+        Modifiers(),
+        TermName(s"${modelName}JsReader"),
+        Template(
+          List(AppliedTypeTree(Ident(TypeName("JsReader")), List(Ident(TypeName(model.fullyQualifiedName))))),
+          noSelfType,
+          combine(
+            TypeDef(Modifiers(Flag.OVERRIDE), TypeName("JsReaderFailure"), List(), modelJsReaderError),
+            ClassDef(Modifiers(Flag.TRAIT | Flag.SEALED), TypeName(s"${modelName}JsReaderError"), List(), Template(List(Ident(TermName(("AnyRef")))), noSelfType, List())),
+            ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}NotJsonObject"), Template(List(modelJsReaderError), noSelfType, List())),
 
-          generateFieldErrors(modelName, model.parameters, modelJsReaderError),
-          generateFieldExtractors(modelName, model.parameters, model.defaultValues, modelJsReaderError),
+            generateFieldErrors(modelName, model.parameters, modelJsReaderError),
+            generateFieldExtractors(modelName, model.parameters, model.defaultValues, modelJsReaderError),
 
-          DEF("read", symbols.Validation(modelJsReaderError, modelClass)).withParams(PARAM("value", symbols.JsValueType)).withFlags(Flags.OVERRIDE) := BLOCK(
-            REF("value") MATCH(
-              CASE (symbols.JsObjectClass.APPLY(REF("map"))) ==> BLOCK(
-                FOR(
-                  generateForComprehensionAssignments(model.parameters)
-                ) YIELD REF(modelClass).APPLY(generateModelAssignments(model.parameters))
+            DefDef(
+              Modifiers(Flag.OVERRIDE),
+              TermName("read"),
+              List(),
+              List(
+                List(ValDef(Modifiers(Flag.PARAM), TermName("value"), Ident(TypeName("JsValue")), EmptyTree))
               ),
-              CASE (WILDCARD) ==> symbols.Failure.APPLY(REF(s"${modelName}NotJsonObject"))
+              TypeApply(Ident(TermName("Validation")), List(modelJsReaderError, modelClass)),
+              Match(
+                Ident(TermName("value")),
+                List(
+                  CaseDef(
+                    Apply(Ident(TermName("JsObject")), List(Bind(TermName("map"), Ident(termNames.WILDCARD)))),
+                    EmptyTree,
+                    generateModelMap(
+                      model.parameters,
+                      Apply(modelClass, generateModelAssignments(model.parameters))
+                    )
+                  ),
+                  CaseDef(Ident(termNames.WILDCARD), EmptyTree, Apply(Ident(TermName("Failure")), Ident(TermName(s"${modelName}NotJsonObject"))))
+                )
+              )
             )
           )
         )
@@ -104,39 +151,60 @@ object JsReaderGen {
   }
 
   def JsReaderParameterRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
-    private def getClassType(fieldType: ModelParameterType): treehugger.forest.Type = fieldType match {
-      case ModelParameterType("Map", innerTypeParameters) => symbols.Map.TYPE_OF(getClassType(innerTypeParameters.head), getClassType(innerTypeParameters.drop(1).head))
-      case ModelParameterType("List", innerTypeParameters) => ListClass.TYPE_OF(getClassType(innerTypeParameters.head))
-      case ModelParameterType("Long", _) => LongClass
-      case ModelParameterType("String", _) => StringClass
-      case ModelParameterType("Float", _) => FloatClass
-      case ModelParameterType("Boolean", _) => BooleanClass
-      case ModelParameterType(typeName, _) => {
-        termPackageMap.get(typeName) match {
-          case Some(fullyQualified) => RootClass.newClass(fullyQualified)
-          case None => RootClass.newClass(typeName)
-        }
-      }
-    }
-
-    def generate(model: Model): treehugger.forest.Tree = {
+    def generate(model: Model): Tree = {
       val modelName = model.name.value
 
-      val modelClass = RootClass.newClass(model.fullyQualifiedName)
-      val modelJsReaderError = RootClass.newAbstractType(s"${modelName}JsReaderError")
+      val modelClass = Ident(TermName(model.fullyQualifiedName))
+      val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
 
       val parameter = model.parameters.head
 
-      OBJECTDEF(s"${modelName}JsReader").withParents(symbols.JsReaderType.APPLYTYPE(model.fullyQualifiedName)) := BLOCK(
-        combine(
-          TYPEVAR(symbols.JsReaderFailureAliasType) := REF(modelJsReaderError),
-          TRAITDEF(modelJsReaderError).withFlags(Flags.SEALED),
-          CASEOBJECTDEF(s"${modelName}InvalidJsonType").withParents(modelJsReaderError),
+      ModuleDef(
+        Modifiers(),
+        TermName(s"${model.name.value}JsReader"),
+        Template(
+          List(AppliedTypeTree(Ident(TypeName("JsReader")), List(Ident(TypeName(model.fullyQualifiedName))))),
+          noSelfType,
+          List(
+            TypeDef(Modifiers(Flag.OVERRIDE), TypeName("JsReaderFailure"), List(), modelJsReaderError),
+            ClassDef(Modifiers(Flag.TRAIT | Flag.SEALED), TypeName(s"${modelName}JsReaderError"), List(), Template(List(Ident(TermName(("AnyRef")))), noSelfType, List())),
+            ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}InvalidJsonType"), Template(List(modelJsReaderError), noSelfType, List())),
 
-          DEF("read", symbols.Validation(modelJsReaderError, modelClass)).withParams(PARAM("value", symbols.JsValueType)).withFlags(Flags.OVERRIDE) := BLOCK(
-            REF("value").DOT("as").APPLYTYPE(getClassType(parameter.parameterType)).DOT("mapError")
-              .APPLY(LAMBDA(PARAM(WILDCARD)) ==> REF(s"${modelName}InvalidJsonType")).DOT("map")
-              .APPLY(LAMBDA(PARAM("x")) ==> modelClass.APPLY(REF("x")))
+            DefDef(
+              Modifiers(Flag.OVERRIDE),
+              TermName("read"),
+              List(),
+              List(
+                List(ValDef(Modifiers(Flag.PARAM), TermName("value"), Ident(TypeName("JsValue")), EmptyTree))
+              ),
+              TypeApply(Ident(TermName("Validation")), List(modelJsReaderError, modelClass)),
+              Apply(
+                Select(
+                  Apply(
+                    Select(
+                      TypeApply(
+                        Select(Ident(TermName("value")), TermName("as")),
+                        List(getClassType(parameter.parameterType, termPackageMap))
+                      ),
+                      TermName("mapError")
+                    ),
+                    List(
+                      Function(
+                        List(ValDef(Modifiers(Flag.PARAM), TermName("_"), TypeTree(), EmptyTree)),
+                        Ident(TermName(s"${modelName}InvalidJsonType"))
+                      )
+                    )
+                  ),
+                  TermName("map")
+                ),
+                List(
+                  Function(
+                    List(ValDef(Modifiers(Flag.PARAM), TermName("f"), TypeTree(), EmptyTree)),
+                    Apply(modelClass, List(Ident(TermName("f"))))
+                  )
+                )
+              )
+            )
           )
         )
       )
