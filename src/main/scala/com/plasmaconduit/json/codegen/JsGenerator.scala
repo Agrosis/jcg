@@ -9,7 +9,6 @@ import com.plasmaconduit.json.codegen.utils.PackageTraverser
 import com.plasmaconduit.json.codegen.utils.Path._
 
 import scala.reflect.runtime.universe._
-import scala.tools.reflect.ToolBox
 
 object JsGenerator {
 
@@ -40,8 +39,6 @@ object JsGenerator {
   }
 
   def main(args: Array[String]): Unit = {
-    val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
-
     if (args.length < 4) {
       println("Arguments: [ROOT_DIRECTORY] [SOURCES_DIRECTORY] [MODELS_PACKAGE] [OUTPUT_PACKAGE]")
       System.exit(0)
@@ -57,8 +54,8 @@ object JsGenerator {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
       val models = ModelGenerator.generateModelsFor(code)
 
-//      println(s"Visiting ${file.getAbsolutePath}...")
-//      println(s"Found ${models.length} models...")
+      println(s"Visiting ${file.getAbsolutePath}...")
+      println(s"Found ${models.length} models...")
 
       models
     })

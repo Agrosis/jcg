@@ -18,7 +18,7 @@ object Build extends Build {
     .settings(
       name                        := "jcg",
       organization                := "com.plasmaconduit",
-      version                     := "0.4.3",
+      version                     := "0.4.4",
       scalaVersion                := "2.11.8",
       ivyScala                    := ivyScala.value map { _.copy(overrideScalaVersion = true) },
       licenses                    += ("MIT", url("http://opensource.org/licenses/MIT")),
@@ -30,7 +30,6 @@ object Build extends Build {
       resolvers                   ++= Seq("snapshots", "releases").map(Resolver.sonatypeRepo),
       resolvers                   += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
       libraryDependencies         += "com.plasmaconduit" %% "json" % "0.23.0",
-      libraryDependencies         += "com.eed3si9n" %% "treehugger" % "0.4.1",
       libraryDependencies         += "org.specs2" %% "specs2" % "2.3.11" % "test",
       assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
     )
