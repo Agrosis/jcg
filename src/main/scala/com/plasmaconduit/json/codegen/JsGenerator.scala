@@ -2,20 +2,23 @@ package com.plasmaconduit.json.codegen
 
 import java.io.{File, PrintWriter}
 
-import com.plasmaconduit.json.codegen.gen.{JsWriterGen, JsReaderGen}
+import com.plasmaconduit.json.codegen.gen.JsWriterGen
+
 import com.plasmaconduit.json.codegen.model.{ModelParameterRep, ModelObjectRep, ModelGenerator, Model}
 import com.plasmaconduit.json.codegen.utils.PackageTraverser
 import com.plasmaconduit.json.codegen.utils.Path._
-import treehugger.forest._
-import treehuggerDSL._
+
+import scala.reflect.runtime.universe._
+import scala.tools.reflect.ToolBox
 
 object JsGenerator {
 
-  def generateJsWriterImplicit(model: Model): treehugger.forest.Tree = {
-    VAL(s"${model.name.value}JsWriterImplicit").withFlags(Flags.IMPLICIT, Flags.LAZY) := REF(s"${model.name.value}JsWriter")
+  def generateJsWriterImplicit(model: Model): Tree = {
+    ValDef(Modifiers(Flag.IMPLICIT | Flag.LAZY), TermName(s"${model.name.value}JsWriterImplicit"), TypeTree(), Ident(TermName(s"${model.name.value}JsWriter")))
   }
 
-  def generateJsWriter(model: Model): treehugger.forest.Tree = {
+
+  def generateJsWriter(model: Model): Tree = {
     model.genWriterRep match {
       case Some(ModelObjectRep(ignore)) => JsWriterGen.JsWriterObjectRepGen(ignore).generate(model)
       case Some(ModelParameterRep) => JsWriterGen.JsWriterParameterRepGen().generate(model)
@@ -23,19 +26,34 @@ object JsGenerator {
     }
   }
 
-  def generateJsReaderImplicit(model: Model): treehugger.forest.Tree = {
-    VAL(s"${model.name.value}JsReaderImplicit").withFlags(Flags.IMPLICIT, Flags.LAZY) := REF(s"${model.name.value}JsReader")
+  def generateJsReaderImplicit(model: Model): Tree = {
+    ValDef(Modifiers(Flag.IMPLICIT | Flag.LAZY), TermName(s"${model.name.value}JsReaderImplicit"), TypeTree(), Ident(TermName(s"${model.name.value}JsWriter")))
   }
 
-  def generateJsReader(model: Model, termPackageMap: Map[String, String]): treehugger.forest.Tree = {
+
+  def generateJsReader(model: Model, termPackageMap: Map[String, String]): Tree = {
     model.genReaderRep match {
-      case Some(ModelObjectRep(ignore)) => JsReaderGen.JsReaderObjectRepGen(termPackageMap).generate(model)
-      case Some(ModelParameterRep) => JsReaderGen.JsReaderParameterRepGen(termPackageMap).generate(model)
-      case None => EmptyTree
+//      case Some(ModelObjectRep(ignore)) => JsReaderGen.JsReaderObjectRepGen(termPackageMap).generate(model)
+//      case Some(ModelParameterRep) => JsReaderGen.JsReaderParameterRepGen(termPackageMap).generate(model)
+//      case None => EmptyTree
+      case _ => EmptyTree
     }
   }
 
   def main(args: Array[String]): Unit = {
+    val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
+    val ast = tb.parse(
+      """
+        |package json.writers {
+        |  import com.plasmaconduit.json._
+        |  object GenJsWriters {
+        |    val x = 3
+        |  }
+        |}
+      """.stripMargin)
+
+//    println(showRaw(ast))
+
     if (args.length < 4) {
       println("Arguments: [ROOT_DIRECTORY] [SOURCES_DIRECTORY] [MODELS_PACKAGE] [OUTPUT_PACKAGE]")
       System.exit(0)
@@ -61,26 +79,34 @@ object JsGenerator {
     val writers = models.filter(_.genWriterRep.isDefined)
     val readers = models.filter(_.genReaderRep.isDefined)
 
-    val genJsWriters = treehugger.forest.treeToString(
-      BLOCK(
-        IMPORT("com.plasmaconduit.json._"),
-        OBJECTDEF("GenJsWriters") := BLOCK(
-          writers.map(generateJsWriterImplicit) ++
-          writers.map(generateJsWriter)
+    val genJsWriters = PackageDef(
+      Ident(TermName(s"$outputPackage.writers")),
+      List(
+        Import(Select(Select(Ident(TermName("com")), TermName("plasmaconduit")), TermName("json")), List(ImportSelector(termNames.WILDCARD, 56, null, -1))),
+        ModuleDef(
+          Modifiers(),
+          TermName("GenJsWriters"),
+          Template(
+            List(),
+            noSelfType,
+            writers.map(generateJsWriterImplicit) ++ writers.map(generateJsWriter)
+          )
         )
-      ).inPackage(s"$outputPackage.writers")
-    )
+      )
+    ).toString()
 
-    val genJsReaders = treehugger.forest.treeToString(
-      BLOCK(
-        IMPORT("com.plasmaconduit.json._"),
-        IMPORT("com.plasmaconduit.validation._"),
-        OBJECTDEF("GenJsReaders") := BLOCK(
-          readers.map(generateJsReaderImplicit) ++
-          readers.map(m => generateJsReader(m, termPackageMap))
-        )
-      ).inPackage(s"$outputPackage.readers")
-    )
+//    println(genJsWriters)
+
+//    val genJsReaders = treehugger.forest.treeToString(
+//      BLOCK(
+//        IMPORT("com.plasmaconduit.json._"),
+//        IMPORT("com.plasmaconduit.validation._"),
+//        OBJECTDEF("GenJsReaders") := BLOCK(
+//          readers.map(generateJsReaderImplicit) ++
+//          readers.map(m => generateJsReader(m, termPackageMap))
+//        )
+//      ).inPackage(s"$outputPackage.readers")
+//    )
 
     val writersDir = new File(rootDir / sourceDir / outputPackagePath / "writers")
     if (!writersDir.exists()) writersDir.mkdirs()
@@ -88,13 +114,13 @@ object JsGenerator {
     val jsWritersWriter = new PrintWriter(new File(rootDir / sourceDir / outputPackagePath / "writers" + "GenJsWriters.scala"))
     jsWritersWriter.write(genJsWriters)
     jsWritersWriter.close()
-
-    val readersDir = new File(rootDir / sourceDir / outputPackagePath / "readers")
-    if (!readersDir.exists()) readersDir.mkdirs()
-
-    val jsReadersWriter = new PrintWriter(new File(rootDir / sourceDir / outputPackagePath / "readers" + "GenJsReaders.scala"))
-    jsReadersWriter.write(genJsReaders)
-    jsReadersWriter.close()
+//
+//    val readersDir = new File(rootDir / sourceDir / outputPackagePath / "readers")
+//    if (!readersDir.exists()) readersDir.mkdirs()
+//
+//    val jsReadersWriter = new PrintWriter(new File(rootDir / sourceDir / outputPackagePath / "readers" + "GenJsReaders.scala"))
+//    jsReadersWriter.write(genJsReaders)
+//    jsReadersWriter.close()
   }
 
 }
