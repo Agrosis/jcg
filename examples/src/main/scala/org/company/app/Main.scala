@@ -4,7 +4,7 @@ import com.plasmaconduit.json.{JsString, JsArray, JsObject}
 import org.company.app.models.{PhoneNumber, Item, User}
 
 import json.writers.GenJsWriters._
-import json.writers.GenJsReaders._
+import json.readers.GenJsReaders._
 
 object Main {
 

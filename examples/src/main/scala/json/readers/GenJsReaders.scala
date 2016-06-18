@@ -1,4 +1,4 @@
-package json.writers {
+package json.readers {
   import com.plasmaconduit.json._;
   import com.plasmaconduit.validation._;
   object GenJsReaders extends  {

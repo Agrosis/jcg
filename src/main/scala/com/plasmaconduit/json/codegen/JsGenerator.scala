@@ -81,7 +81,7 @@ object JsGenerator {
     ).toString()
 
     val genJsReaders = PackageDef(
-      Ident(TermName(s"$outputPackage.writers")),
+      Ident(TermName(s"$outputPackage.readers")),
       List(
         Import(Select(Select(Ident(TermName("com")), TermName("plasmaconduit")), TermName("json")), List(ImportSelector(termNames.WILDCARD, 56, null, -1))),
         Import(Select(Select(Ident(TermName("com")), TermName("plasmaconduit")), TermName("validation")), List(ImportSelector(termNames.WILDCARD, 56, null, -1))),
