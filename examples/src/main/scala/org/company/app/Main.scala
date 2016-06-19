@@ -23,7 +23,7 @@ object Main {
 
     val input = JsObject(
       "id" -> 3,
-      "name" -> "Portal 2"
+      "name" -> "item_Portal 2"
     )
 
     val input2 = JsObject(
@@ -31,14 +31,20 @@ object Main {
       "username" -> "Agro",
       "password" -> "sykretz",
       "email" -> "agro@jantox.com",
-      "items" -> JsArray(JsObject("id" -> 3, "name" -> "Portal 2"), JsObject("id" -> 4, "name" -> "Left 4 Dead 2"))
+      "items" -> JsArray(JsObject("id" -> 3, "name" -> "item_Portal 2"), JsObject("id" -> 4, "name" -> "item_Left 4 Dead 2"))
     )
 
     val input3 = JsString("1234567890")
 
+    val input4 = JsObject(
+      "start" -> "2016-06-19T15:04:39.765",
+      "end" -> "2016-06-19T15:04:39.765"
+    )
+
     println(input.as[Item])
     println(input2.as[User])
     println(input3.as[PhoneNumber])
+    println(input4.as[DateRange])
   }
 
 }

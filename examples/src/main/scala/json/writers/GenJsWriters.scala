@@ -18,8 +18,9 @@ package json.writers {
       }
     };
     object ItemJsWriter extends JsWriter[org.company.app.models.Item] {
+      val nameWriter = org.company.app.models.Item.ItemNameJsWriter;
       override def write(m: org.company.app.models.Item): JsValue = {
-        JsObject(scala.Tuple2("id", m.id), scala.Tuple2("name", JsString(m.name)))
+        JsObject(scala.Tuple2("id", m.id), scala.Tuple2("name", nameWriter.write(m.name)))
       }
     };
     object PhoneNumberJsWriter extends JsWriter[org.company.app.models.PhoneNumber] {

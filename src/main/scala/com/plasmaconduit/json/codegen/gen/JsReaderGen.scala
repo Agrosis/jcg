@@ -37,6 +37,12 @@ object JsReaderGen {
     }
   }
 
+  private def generateCustomReaders(customReaders: Map[String, Tree]): List[Tree] = {
+    customReaders.toList.map {
+      case (name, tree) => ValDef(Modifiers(), TermName(name), TypeTree(), tree)
+    }
+  }
+
   def JsReaderObjectRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
     private def generateFieldErrors(className: String, fields: List[ModelParameter], errorType: Ident): List[Tree] = {
       fields.flatMap(f => {
@@ -54,26 +60,34 @@ object JsReaderGen {
       }
     }
 
-    private def generateFieldExtractors(className: String, fields: List[ModelParameter], defaultValues: ModelDefaultParameterValues, errorType: Ident): List[Tree] = {
+    private def generateFieldExtractors(className: String, fields: List[ModelParameter], defaultValues: ModelDefaultParameterValues, customReaders: Map[String, Tree], errorType: Ident): List[Tree] = {
       fields.map(f => {
         val modelType = getClassType(f.parameterType, termPackageMap)
+        val fieldReaderName = s"${f.term.value}Reader"
+
+        val fieldExtractor = Apply(
+          TypeApply(Ident(TermName("JsonObjectValueExtractor")), List(modelType, errorType)),
+          List(
+            AssignOrNamedArg(Ident(TermName("key")), Literal(Constant(f.term.value))),
+            AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"$className${f.term.value.capitalize}MissingError"))),
+            AssignOrNamedArg(Ident(TermName("invalid")), Function(
+              List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
+              Ident(TermName(s"$className${f.term.value.capitalize}InvalidError"))
+            )),
+            AssignOrNamedArg(Ident(TermName("default")), generateDefaultValue(f, defaultValues))
+          )
+        )
+
+        val fieldExtractorImplicit = customReaders.get(fieldReaderName) match {
+          case Some(reader) => Apply(fieldExtractor, List(Ident(TermName(fieldReaderName))))
+          case None => fieldExtractor
+        }
 
         ValDef(
           Modifiers(),
           TermName(s"${f.term.value}Extractor"),
           TypeTree(),
-          Apply(
-            TypeApply(Ident(TermName("JsonObjectValueExtractor")), List(modelType, errorType)),
-            List(
-              AssignOrNamedArg(Ident(TermName("key")), Literal(Constant(f.term.value))),
-              AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"$className${f.term.value.capitalize}MissingError"))),
-              AssignOrNamedArg(Ident(TermName("invalid")), Function(
-                List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-                Ident(TermName(s"$className${f.term.value.capitalize}InvalidError"))
-              )),
-              AssignOrNamedArg(Ident(TermName("default")), generateDefaultValue(f, defaultValues))
-            )
-          )
+          fieldExtractorImplicit
         )
       })
     }
@@ -103,7 +117,6 @@ object JsReaderGen {
 
     def generate(model: Model): Tree = {
       val modelName = model.name.value
-
       val modelClass = Ident(TermName(model.fullyQualifiedName))
       val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
 
@@ -118,8 +131,9 @@ object JsReaderGen {
             ClassDef(Modifiers(Flag.TRAIT | Flag.SEALED), TypeName(s"${modelName}JsReaderError"), List(), Template(List(Ident(TermName(("AnyRef")))), noSelfType, List())),
             ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}NotJsonObject"), Template(List(modelJsReaderError), noSelfType, List())),
 
+            generateCustomReaders(model.customReaders),
             generateFieldErrors(modelName, model.parameters, modelJsReaderError),
-            generateFieldExtractors(modelName, model.parameters, model.defaultValues, modelJsReaderError),
+            generateFieldExtractors(modelName, model.parameters, model.defaultValues, model.customReaders, modelJsReaderError),
 
             DefDef(
               Modifiers(Flag.OVERRIDE),
@@ -156,11 +170,17 @@ object JsReaderGen {
   def JsReaderParameterRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
     def generate(model: Model): Tree = {
       val modelName = model.name.value
-
       val modelClass = Ident(TermName(model.fullyQualifiedName))
       val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
 
       val parameter = model.parameters.head
+      val fieldReaderName = s"${parameter.term.value}Reader"
+
+      val fieldAsApply = TypeApply(Select(Ident(TermName("value")), TermName("as")), List(getClassType(parameter.parameterType, termPackageMap)))
+      val fieldApplyImplicit = model.customReaders.get(fieldReaderName) match {
+        case Some(reader) => Apply(fieldAsApply, List(Ident(TermName(fieldReaderName))))
+        case None => fieldAsApply
+      }
 
       ModuleDef(
         Modifiers(),
@@ -168,10 +188,12 @@ object JsReaderGen {
         Template(
           List(AppliedTypeTree(Ident(TypeName("JsReader")), List(Ident(TypeName(model.fullyQualifiedName))))),
           noSelfType,
-          List(
+          combine(
             TypeDef(Modifiers(Flag.OVERRIDE), TypeName("JsReaderFailure"), List(), modelJsReaderError),
             ClassDef(Modifiers(Flag.TRAIT | Flag.SEALED), TypeName(s"${modelName}JsReaderError"), List(), Template(List(Ident(TermName(("AnyRef")))), noSelfType, List())),
             ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}InvalidJsonType"), Template(List(modelJsReaderError), noSelfType, List())),
+
+            generateCustomReaders(model.customReaders),
 
             DefDef(
               Modifiers(Flag.OVERRIDE),
@@ -187,10 +209,7 @@ object JsReaderGen {
                   Select(
                     Apply(
                       Select(
-                        TypeApply(
-                          Select(Ident(TermName("value")), TermName("as")),
-                          List(getClassType(parameter.parameterType, termPackageMap))
-                        ),
+                        fieldApplyImplicit,
                         TermName("mapError")
                       ),
                       List(
