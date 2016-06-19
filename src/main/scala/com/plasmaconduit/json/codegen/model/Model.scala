@@ -1,11 +1,15 @@
 package com.plasmaconduit.json.codegen.model
 
+import scala.reflect.runtime.universe._
+
 final case class Model(name: ModelName,
                        modelPackage: ModelPackage,
                        parameters: List[ModelParameter],
                        defaultValues: ModelDefaultParameterValues,
                        genReaderRep: Option[ModelRep],
-                       genWriterRep: Option[ModelRep]) {
+                       genWriterRep: Option[ModelRep],
+                       customReaders: Map[String, Tree],
+                       customWriters: Map[String, Tree]) {
 
   def fullyQualifiedName: String = s"${modelPackage.value}.${name.value}"
 

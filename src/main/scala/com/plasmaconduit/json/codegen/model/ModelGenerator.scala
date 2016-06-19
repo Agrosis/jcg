@@ -50,7 +50,7 @@ object ModelGenerator {
     }
   }
 
-  private def getRep(ast: List[Tree], termName: String): Option[ModelRep] = {
+  private def getRepresentation(ast: List[Tree], termName: String): Option[ModelRep] = {
     def extractLiterals(list: List[Tree]): List[String] = list match {
       case Literal(Constant(x: String)) :: xs => x :: extractLiterals(xs)
       case x :: xs => extractLiterals(xs)
@@ -67,8 +67,18 @@ object ModelGenerator {
       case ValDef(modifiers, TermName(t), typeTree, Ident(TermName("GenParameterRep"))) :: xs if t == termName => {
         Some(ModelParameterRep)
       }
-      case x :: xs => getRep(xs, termName)
+      case x :: xs => getRepresentation(xs, termName)
       case Nil => Some(ModelObjectRep(List())) // TODO: Look at parent's field
+    }
+  }
+
+  private def getCustomFields(ast: List[Tree], suffix: String): Map[String, Tree] = {
+    ast match {
+      case ValDef(modifiers, TermName(t), typeTree, eq) :: xs if t.endsWith(suffix) => {
+        Map(t -> eq) ++ getCustomFields(xs, suffix)
+      }
+      case x :: xs => getCustomFields(xs, suffix)
+      case Nil => Map()
     }
   }
 
@@ -81,14 +91,17 @@ object ModelGenerator {
         body.flatMap(childAst => traverseForModels(childAst, s"$packageName.$objectName"))
       }
       case ClassDef(modifiers, TypeName(name), typeDef, Template(parents, self, body)) if parentExists(parents, "GenReader") || parentExists(parents, "GenWriter") => {
+        val parameters = getParameters(body)
         List(
           Model(
             ModelName(name),
             ModelPackage(packageName),
-            getParameters(body),
+            parameters,
             ModelDefaultParameterValues(getDefaultParameters(body)),
-            if (parentExists(parents, "GenReader")) getRep(body, "readerRep") else None,
-            if (parentExists(parents, "GenWriter")) getRep(body, "writerRep") else None
+            if (parentExists(parents, "GenReader")) getRepresentation(body, "readerRep") else None,
+            if (parentExists(parents, "GenWriter")) getRepresentation(body, "writerRep") else None,
+            getCustomFields(body, "Reader"),
+            getCustomFields(body, "Writer")
           )
         )
       }

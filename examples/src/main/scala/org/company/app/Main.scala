@@ -1,7 +1,9 @@
 package org.company.app
 
+import java.time.LocalDateTime
+
 import com.plasmaconduit.json.{JsString, JsArray, JsObject}
-import org.company.app.models.{PhoneNumber, Item, User}
+import org.company.app.models._
 
 import json.writers.GenJsWriters._
 import json.readers.GenJsReaders._
@@ -13,7 +15,8 @@ object Main {
 
     val payload = JsObject(
       "user" -> user,
-      "phoneNumber" -> PhoneNumber("1234567890")
+      "phoneNumber" -> PhoneNumber("1234567890"),
+      "hours" -> DateRange(Date(LocalDateTime.now()), Date(LocalDateTime.now()))
     )
 
     println(payload)

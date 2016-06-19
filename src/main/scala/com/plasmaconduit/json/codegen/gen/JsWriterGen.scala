@@ -10,6 +10,14 @@ sealed trait JsWriterGen {
 
 object JsWriterGen {
 
+  private def combine(trees: List[Tree]*): List[Tree] = {
+    trees.foldLeft(List[Tree]())((b, a) => b ++ a)
+  }
+
+  private implicit def treeToListTree[A <% Tree](tree: A): List[Tree] = {
+    List(tree)
+  }
+
   private def generateJsObjectMapValues(tree: Tree, typeParameter: ModelParameterType): Tree = typeParameter match {
     case ModelParameterType("Map", innerTypeParameters) => {
       Apply(
@@ -110,21 +118,40 @@ object JsWriterGen {
     case ModelParameterType(name, _) => tree
   }
 
+  private def generateCustomWriters(customWriters: Map[String, Tree]): List[Tree] = {
+    customWriters.toList.map {
+      case (name, tree) => ValDef(Modifiers(), TermName(name), TypeTree(), tree)
+    }
+  }
+
   def JsWriterObjectRepGen(ignore: List[String]) = new JsWriterGen {
-    private def generateFieldOutput(field: ModelParameter, refName: String): Tree = {
+    private def generateFieldOutput(field: ModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
       val fieldName = field.term.value
-      val value: Tree = field.parameterType match {
-        case ModelParameterType("Map", typeParameters) => {
-          generateJsObjectMapValues(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.drop(1).head)
+      val fieldWriterName = s"${fieldName}Writer"
+      val fieldSelect = Select(Ident(TermName(refName)), TermName(fieldName))
+
+      val value: Tree = customWriters.get(fieldWriterName) match {
+        case Some(writer) => {
+          Apply(
+            Select(Ident(TermName(fieldWriterName)), TermName("write")),
+            List(fieldSelect)
+          )
         }
-        case ModelParameterType("List", typeParameters) => {
-          generateJsArrayMap(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.head)
+        case None => {
+          field.parameterType match {
+            case ModelParameterType("Map", typeParameters) => {
+              generateJsObjectMapValues(fieldSelect, typeParameters.drop(1).head)
+            }
+            case ModelParameterType("List", typeParameters) => {
+              generateJsArrayMap(fieldSelect, typeParameters.head)
+            }
+            case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
+            case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
+            case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
+            case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
+            case ModelParameterType(name, _) => fieldSelect
+          }
         }
-        case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType(name, _) => Select(Ident(TermName(refName)), TermName(fieldName))
       }
 
       Apply(Select(Ident(TermName("scala")), TermName("Tuple2")), List(Literal(Constant(field.term.value)), value))
@@ -137,14 +164,18 @@ object JsWriterGen {
         Template(
           List(AppliedTypeTree(Ident(TypeName("JsWriter")), List(Ident(TypeName(model.fullyQualifiedName))))),
           noSelfType,
-          List(
+          combine(
+            generateCustomWriters(model.customWriters),
             DefDef(
               Modifiers(Flag.OVERRIDE),
               TermName("write"),
               List(),
               List(List(ValDef(Modifiers(Flag.PARAM), TermName("m"), Ident(TypeName(model.fullyQualifiedName)), EmptyTree))),
               Ident(TypeName("JsValue")),
-              Apply(Ident(TermName("JsObject")), model.parameters.filter(p => !ignore.contains(p.term.value)).map(field => generateFieldOutput(field, "m")))
+              Block(
+                List(),
+                Apply(Ident(TermName("JsObject")), model.parameters.filter(p => !ignore.contains(p.term.value)).map(field => generateFieldOutput(field, "m", model.customWriters)))
+              )
             )
           )
         )
@@ -153,20 +184,33 @@ object JsWriterGen {
   }
 
   def JsWriterParameterRepGen() = new JsWriterGen {
-    private def generateModelOutput(field: ModelParameter, refName: String): Tree = {
+    private def generateModelOutput(field: ModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
       val fieldName = field.term.value
-      field.parameterType match {
-        case ModelParameterType("Map", typeParameters) => {
-          Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.drop(1).head)))
+      val fieldWriterName = s"${fieldName}Writer"
+      val fieldSelect = Select(Ident(TermName(refName)), TermName(fieldName))
+
+      customWriters.get(fieldWriterName) match {
+        case Some(writer) => {
+          Apply(
+            Select(Ident(TermName(fieldWriterName)), TermName("write")),
+            List(fieldSelect)
+          )
         }
-        case ModelParameterType("List", typeParameters) => {
-          Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(Select(Ident(TermName(refName)), TermName(fieldName)), typeParameters.head)))
+        case None => {
+          field.parameterType match {
+            case ModelParameterType("Map", typeParameters) => {
+              Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(fieldSelect, typeParameters.drop(1).head)))
+            }
+            case ModelParameterType("List", typeParameters) => {
+              Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(fieldSelect, typeParameters.head)))
+            }
+            case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
+            case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
+            case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
+            case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
+            case ModelParameterType(name, _) => fieldSelect
+          }
         }
-        case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(Select(Ident(TermName(refName)), TermName(fieldName))))
-        case ModelParameterType(name, _) => Ident(TermName(refName))
       }
     }
 
@@ -177,14 +221,18 @@ object JsWriterGen {
         Template(
           List(AppliedTypeTree(Ident(TypeName("JsWriter")), List(Ident(TypeName(model.fullyQualifiedName))))),
           noSelfType,
-          List(
+          combine(
+            generateCustomWriters(model.customWriters),
             DefDef(
               Modifiers(Flag.OVERRIDE),
               TermName("write"),
               List(),
               List(List(ValDef(Modifiers(Flag.PARAM), TermName("m"), Ident(TypeName(model.fullyQualifiedName)), EmptyTree))),
               Ident(TypeName("JsValue")),
-              generateModelOutput(model.parameters.head, "m")
+              Block(
+                List(),
+                generateModelOutput(model.parameters.head, "m", model.customWriters)
+              )
             )
           )
         )

@@ -89,7 +89,7 @@ object JsReaderGen {
           List(
             Function(
               List(ValDef(Modifiers(Flag.PARAM), TermName(f.term.value), TypeTree(), EmptyTree)),
-              generateModelMap(fs, inner)
+              Block(List(), generateModelMap(fs, inner))
             )
           )
         )
@@ -129,18 +129,21 @@ object JsReaderGen {
                 List(ValDef(Modifiers(Flag.PARAM), TermName("value"), Ident(TypeName("JsValue")), EmptyTree))
               ),
               TypeApply(Ident(TermName("Validation")), List(modelJsReaderError, modelClass)),
-              Match(
-                Ident(TermName("value")),
-                List(
-                  CaseDef(
-                    Apply(Ident(TermName("JsObject")), List(Bind(TermName("map"), Ident(termNames.WILDCARD)))),
-                    EmptyTree,
-                    generateModelMap(
-                      model.parameters,
-                      Apply(modelClass, generateModelAssignments(model.parameters))
-                    )
-                  ),
-                  CaseDef(Ident(termNames.WILDCARD), EmptyTree, Apply(Ident(TermName("Failure")), Ident(TermName(s"${modelName}NotJsonObject"))))
+              Block(
+                List(),
+                Match(
+                  Ident(TermName("value")),
+                  List(
+                    CaseDef(
+                      Apply(Ident(TermName("JsObject")), List(Bind(TermName("map"), Ident(termNames.WILDCARD)))),
+                      EmptyTree,
+                      generateModelMap(
+                        model.parameters,
+                        Apply(modelClass, generateModelAssignments(model.parameters))
+                      )
+                    ),
+                    CaseDef(Ident(termNames.WILDCARD), EmptyTree, Apply(Ident(TermName("Failure")), Ident(TermName(s"${modelName}NotJsonObject"))))
+                  )
                 )
               )
             )
@@ -178,29 +181,32 @@ object JsReaderGen {
                 List(ValDef(Modifiers(Flag.PARAM), TermName("value"), Ident(TypeName("JsValue")), EmptyTree))
               ),
               TypeApply(Ident(TermName("Validation")), List(modelJsReaderError, modelClass)),
-              Apply(
-                Select(
-                  Apply(
-                    Select(
-                      TypeApply(
-                        Select(Ident(TermName("value")), TermName("as")),
-                        List(getClassType(parameter.parameterType, termPackageMap))
+              Block(
+                List(),
+                Apply(
+                  Select(
+                    Apply(
+                      Select(
+                        TypeApply(
+                          Select(Ident(TermName("value")), TermName("as")),
+                          List(getClassType(parameter.parameterType, termPackageMap))
+                        ),
+                        TermName("mapError")
                       ),
-                      TermName("mapError")
-                    ),
-                    List(
-                      Function(
-                        List(ValDef(Modifiers(Flag.PARAM), TermName("_"), TypeTree(), EmptyTree)),
-                        Ident(TermName(s"${modelName}InvalidJsonType"))
+                      List(
+                        Function(
+                          List(ValDef(Modifiers(Flag.PARAM), TermName("_"), TypeTree(), EmptyTree)),
+                          Ident(TermName(s"${modelName}InvalidJsonType"))
+                        )
                       )
-                    )
+                    ),
+                    TermName("map")
                   ),
-                  TermName("map")
-                ),
-                List(
-                  Function(
-                    List(ValDef(Modifiers(Flag.PARAM), TermName("f"), TypeTree(), EmptyTree)),
-                    Apply(modelClass, List(Ident(TermName("f"))))
+                  List(
+                    Function(
+                      List(ValDef(Modifiers(Flag.PARAM), TermName("f"), TypeTree(), EmptyTree)),
+                      Apply(modelClass, List(Ident(TermName("f"))))
+                    )
                   )
                 )
               )
