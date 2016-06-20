@@ -131,8 +131,8 @@ object JsReaderGen {
             ClassDef(Modifiers(Flag.TRAIT | Flag.SEALED), TypeName(s"${modelName}JsReaderError"), List(), Template(List(Ident(TermName(("AnyRef")))), noSelfType, List())),
             ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}NotJsonObject"), Template(List(modelJsReaderError), noSelfType, List())),
 
-            generateCustomReaders(model.customReaders),
             generateFieldErrors(modelName, model.parameters, modelJsReaderError),
+            generateCustomReaders(model.customReaders),
             generateFieldExtractors(modelName, model.parameters, model.defaultValues, model.customReaders, modelJsReaderError),
 
             DefDef(
