@@ -36,10 +36,10 @@ object PhoneNumber {
         default = None
     )
 
-    override def read(value: JsValue): Validation[PhoneNumberJsReaderError, org.company.app.models.phone.PhoneNumber] = {
+    override def read(value: JsValue): Validation[PhoneNumberJsReaderError, PhoneNumber] = {
       value match {
         case JsObject(map) => {
-          for (number <- numberExtractor(map)) yield org.company.app.models.phone.PhoneNumber(number = number)
+          for (number <- numberExtractor(map)) yield PhoneNumber(number)
         }
         case _ => Failure(PhoneNumberNotJsonObject)
       }
@@ -74,7 +74,11 @@ First, specify the models for which you want to generate a `JsReader` and/or `Js
 ```scala
 import com.plasmaconduit.json.codegen.traits._
 
-final case class User(id: Int, username: String, password: String, email: String, items: List[Item]) extends GenWriter
+final case class User(id: Int,
+                      username: String,
+                      password: String,
+                      email: String,
+                      items: List[Item]) extends GenWriter
 
 final case class Item(id: Int, name: String) extends GenReader with GenWriter
 
@@ -119,7 +123,10 @@ Representations
 The default representation `jcg` uses for a reader or a writer is `GenObjectRep()`, which treats the model solely as an JSON object. This is reasonable when we have a model with multiple fields, like `User`. You can specify fields to ignore by passing in a List of field names to ignore.
 
 ```scala
-final case class User(id: Int, username: String, password: String, email: String, items: List[Item]) extends GenWriter {
+final case class User(id: Int,
+                      username: String,
+                      password: String,
+                      email: String, items: List[Item]) extends GenWriter {
   val writerRep = GenWriterRep(List("password"))
 }
 ```
@@ -163,7 +170,7 @@ object Date {
 This is also a useful way to manipulate field values before writing/reading them.
 
 ```scala
-case class Item(id: Int, name: String) extends GenWriter {
+final case class Item(id: Int, name: String) extends GenWriter {
   val nameWriter = org.company.app.models.Item.ItemNameJsWriter
 }
 
