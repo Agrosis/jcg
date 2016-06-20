@@ -34,21 +34,6 @@ object Build extends Build {
       assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
     )
 
-  lazy val traits = Project("traits", file("./traits"))
-    .settings(customBintraySettings: _*)
-    .settings(
-      name                  := "jcg-traits",
-      organization          := "com.plasmaconduit",
-      version               := "0.4.2",
-      crossScalaVersions    := Seq("2.10.4", "2.11.8"),
-      licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
-      scalacOptions         += "-feature",
-      scalacOptions         += "-deprecation",
-      scalacOptions         += "-unchecked",
-      scalacOptions in Test ++= Seq("-Yrangepos"),
-      libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
-    )
-
   lazy val examples = Project("examples", file("./examples"))
     .settings(
       name                  := "jcg-examples",
@@ -63,6 +48,22 @@ object Build extends Build {
       libraryDependencies   += "com.plasmaconduit" %% "json" % "0.23.0",
       libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
     )
+    .aggregate(traits)
     .dependsOn(traits)
+
+  lazy val traits = Project("traits", file("./traits"))
+    .settings(customBintraySettings: _*)
+    .settings(
+      name                  := "jcg-traits",
+      organization          := "com.plasmaconduit",
+      version               := "0.4.2",
+      crossScalaVersions    := Seq("2.10.4", "2.11.8"),
+      licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
+      scalacOptions         += "-feature",
+      scalacOptions         += "-deprecation",
+      scalacOptions         += "-unchecked",
+      scalacOptions in Test ++= Seq("-Yrangepos"),
+      libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
+    )
 
 }

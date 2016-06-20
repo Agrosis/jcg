@@ -72,7 +72,7 @@ object JsGenerator {
           Modifiers(),
           TermName("GenJsWriters"),
           Template(
-            List(),
+            List(Ident(TermName("AnyRef"))),
             noSelfType,
             writers.map(generateJsWriterImplicit) ++ writers.map(generateJsWriter)
           )
@@ -89,7 +89,7 @@ object JsGenerator {
           Modifiers(),
           TermName("GenJsReaders"),
           Template(
-            List(),
+            List(Ident(TermName("AnyRef"))),
             noSelfType,
             readers.map(generateJsReaderImplicit) ++ readers.map(generateJsReader(_, termPackageMap))
           )

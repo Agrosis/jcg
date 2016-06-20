@@ -1,10 +1,8 @@
 package json.readers {
-
-import java.time.LocalDateTime
-
-import com.plasmaconduit.json._;
+  import com.plasmaconduit.json._;
   import com.plasmaconduit.validation._;
-  object GenJsReaders extends  {
+  import java.time.LocalDateTime;
+  object GenJsReaders extends AnyRef {
     implicit lazy val DateJsReaderImplicit = DateJsReader;
     implicit lazy val DateRangeJsReaderImplicit = DateRangeJsReader;
     implicit lazy val ItemJsReaderImplicit = ItemJsReader;
@@ -44,11 +42,11 @@ import com.plasmaconduit.json._;
       override type JsReaderFailure = ItemJsReaderError;
       sealed trait ItemJsReaderError extends AnyRef;
       case object ItemNotJsonObject extends ItemJsReaderError;
-      val nameReader = org.company.app.models.Item.ItemNameJsReader;
       case object ItemIdInvalidError extends ItemJsReaderError;
       case object ItemIdMissingError extends ItemJsReaderError;
       case object ItemNameInvalidError extends ItemJsReaderError;
       case object ItemNameMissingError extends ItemJsReaderError;
+      val nameReader = org.company.app.models.Item.ItemNameJsReader;
       val idExtractor = JsonObjectValueExtractor[Int, ItemJsReaderError](key = "id", missing = ItemIdMissingError, invalid = ((x) => ItemIdInvalidError), default = None);
       val nameExtractor = JsonObjectValueExtractor[String, ItemJsReaderError](key = "name", missing = ItemNameMissingError, invalid = ((x) => ItemNameInvalidError), default = None)(nameReader);
       override def read(value: JsValue): Validation[ItemJsReaderError, org.company.app.models.Item] = {

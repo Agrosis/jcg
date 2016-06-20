@@ -1,6 +1,6 @@
 package json.writers {
   import com.plasmaconduit.json._;
-  object GenJsWriters extends  {
+  object GenJsWriters extends AnyRef {
     implicit lazy val DateJsWriterImplicit = DateJsWriter;
     implicit lazy val DateRangeJsWriterImplicit = DateRangeJsWriter;
     implicit lazy val ItemJsWriterImplicit = ItemJsWriter;
