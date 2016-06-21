@@ -6,7 +6,7 @@ jcg
 Motivation
 ----------
 
-This tool is meant to be used in conjunction with [json](https://github.com/plasmaconduit/json), which exposes two traits, `JsWriter` and `JsReader`, which can be used to implement serializers and deserializers to and from JSON. A trivial model:
+This tool is meant to be used in conjunction with [json](https://github.com/plasmaconduit/json), which exposes two traits, `JsWriter` and `JsReader`. These can be used to implement serializers and deserializers to and from JSON, with type safety and an assortment of error values. A trivial model:
 
 ```scala
 import com.plasmaconduit.json._
@@ -48,11 +48,11 @@ object PhoneNumber {
 }
 ```
 
-This is a lot of boilerplate, but even more importantly, adding additional fields is time consuming. As your codebase grows with more and more models, writing implementations for these traits becomes fairly repetitive and time consuming. All those error objects are useful, but are fairly irritating to write by hand for every field.
+This is a lot of boilerplate, and adding additional fields is time consuming. As your codebase grows with more and more models, writing implementations for these traits becomes fairly repetitive and time consuming. The error values are definitely useful, but it takes a bit of work to create all of them.
 
-Instead of falling back to reflection on-the-fly to serialize/deserialize to and from JSON (thereby giving up type safety), we realized that the schema for a `JsReader` or `JsWriter` can more or less be inferred from the declaration of a model. Therefore, given the Scala AST of a model, we can automatically generate a basic `JsWriter` or `JsReader`.
+Instead of falling back to reflection on-the-fly to serialize/deserialize to and from JSON (thereby giving up type safety and all those error values), we realized that the schema for a `JsReader` or `JsWriter` can more or less be inferred from the declaration of a model. Therefore, given the Scala AST of a model, we can automatically generate a `JsWriter` or `JsReader`.
 
-`jcg` scans your Scala codebase for models and generates code and dumps it to a directory of your choice.
+`jcg` scans your Scala codebase for models and generates code and dumps it to a package of your choice.
 
 
 Install
