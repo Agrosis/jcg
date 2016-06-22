@@ -218,8 +218,3 @@ Caveats
 `jcg` is not a full-fledged compiler or typechecker, so when specifying fields like `LocalDateTime` or custom readers/writers, try to use the fully qualified name to types, otherwise you will have to resolve these errors in the generate code. We should also be able to serialize/deserialize each inhabitant of `Vehicle` individually without any problems.
 
 If you use a model that will be tracked by `jcg` as a field in another model, its fully qualified name will automatically be determined and used in the generated code for your convenience.
-
-TODO
-----
-* Implement reader/writer generators for sealed traits.
-* Insert comments/warnings.
