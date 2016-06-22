@@ -61,7 +61,7 @@ object ModelGenerator {
       case ValDef(modifiers, TermName(t), typeTree, Apply(Ident(TermName("GenObjectRep")), List())) :: xs if t == termName => {
         Some(ModelObjectRep(List()))
       }
-      case ValDef(modifiers, TermName(t), typeTree, Apply(Ident(TermName("GenObjectRep")), List(Apply(Ident(TermName("List")), literals)))) :: xs if t == termName => {
+      case ValDef(modifiers, TermName(t), typeTree, Apply(Ident(TermName("GenObjectRep")), List(Apply(Ident(TermName("Ignore")), literals)))) :: xs if t == termName => {
         Some(ModelObjectRep(extractLiterals(literals)))
       }
       case ValDef(modifiers, TermName(t), typeTree, Ident(TermName("GenParameterRep"))) :: xs if t == termName => {

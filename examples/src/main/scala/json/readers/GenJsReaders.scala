@@ -1,7 +1,7 @@
 package json.readers {
+  import java.time.LocalDateTime;
   import com.plasmaconduit.json._;
   import com.plasmaconduit.validation._;
-  import java.time.LocalDateTime;
   object GenJsReaders extends AnyRef {
     implicit lazy val DateJsReaderImplicit = DateJsReader;
     implicit lazy val DateRangeJsReaderImplicit = DateRangeJsReader;
