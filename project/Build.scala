@@ -18,7 +18,7 @@ object Build extends Build {
     .settings(
       name                        := "jcg",
       organization                := "com.plasmaconduit",
-      version                     := "0.4.6",
+      version                     := "0.4.7",
       scalaVersion                := "2.11.8",
       ivyScala                    := ivyScala.value map { _.copy(overrideScalaVersion = true) },
       licenses                    += ("MIT", url("http://opensource.org/licenses/MIT")),
@@ -38,7 +38,7 @@ object Build extends Build {
     .settings(
       name                  := "jcg-examples",
       organization          := "com.plasmaconduit",
-      version               := "0.4.6",
+      version               := "0.4.7",
       scalaVersion          := "2.11.8",
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",
@@ -56,7 +56,7 @@ object Build extends Build {
     .settings(
       name                  := "jcg-traits",
       organization          := "com.plasmaconduit",
-      version               := "0.4.2",
+      version               := "0.4.3",
       crossScalaVersions    := Seq("2.10.4", "2.11.8"),
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",

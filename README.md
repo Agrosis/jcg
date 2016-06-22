@@ -61,7 +61,7 @@ Install
 Add the following to your `Build.scala`
 ```
 resolvers += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
-libraryDependencies += "com.plasmaconduit" %% "jcg-traits" % "0.4.2"
+libraryDependencies += "com.plasmaconduit" %% "jcg-traits" % "0.4.3"
 ```
 
 Download the latest `jcg` binary that matches the minor version of the `jcg-traits` dependency you downloaded.
@@ -91,7 +91,7 @@ final case class PhoneNumber(value: String) extends GenReader with GenWriter {
 Run the tool in your root directory to generate all the code you don't have to write anymore!
 
 ```
-java -cp "jcg-0.4.6.jar:." com.plasmaconduit.json.codegen.JsGenerator /path/to/jcg/examples src/main/scala org.company.app json
+java -cp "jcg-0.4.7.jar:." com.plasmaconduit.json.codegen.JsGenerator /path/to/jcg/examples src/main/scala org.company.app json
 ```
 
 This will recursively find models in the package `org.company.app` create a package `json` with the generated code. Now, you can use the readers and writers wherever you'd like!
