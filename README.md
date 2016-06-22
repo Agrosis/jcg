@@ -208,6 +208,7 @@ final case class Boat(seats: Int) extends Vehicle with GenWriter with GenReader
 ```
 
 There are a few things to note when using ADT generation:
+
 1. The inhabitants of the trait must extend the `Gen` traits that the trait does. Otherwise there will be compiler warnings for the generated code.
 2. The inhabitants of the trait must have a `GenObjectRep` representation.
 3. The inhabitants of the trait should not have a `type` field.
