@@ -6,7 +6,7 @@ jcg
 Motivation
 ----------
 
-This tool is meant to be used in conjunction with [json](https://github.com/plasmaconduit/json), which exposes two traits, `JsWriter` and `JsReader`. These can be used to implement serializers and deserializers to and from JSON, with type safety and an assortment of error values. A trivial model:
+This tool is meant to be used in conjunction with [json](https://github.com/plasmaconduit/json), which exposes two type classes, `JsWriter` and `JsReader`. These can be used to implement serializers and deserializers to and from JSON, with type safety and an assortment of error values. A trivial model:
 
 ```scala
 import com.plasmaconduit.json._
