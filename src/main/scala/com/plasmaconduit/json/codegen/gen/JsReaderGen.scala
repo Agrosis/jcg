@@ -1,11 +1,11 @@
 package com.plasmaconduit.json.codegen.gen
 
-import com.plasmaconduit.json.codegen.model.{ModelDefaultParameterValues, ModelParameterType, ModelParameter, Model}
+import com.plasmaconduit.json.codegen.model.{ClassModelParameterType, ClassModelParameter, ClassModel}
 
 import scala.reflect.runtime.universe._
 
 sealed trait JsReaderGen {
-  def generate(model: Model): Tree
+  def generate(model: ClassModel): Tree
 }
 
 object JsReaderGen {
@@ -18,18 +18,18 @@ object JsReaderGen {
     List(tree)
   }
 
-  private def getClassType(fieldType: ModelParameterType, termPackageMap: Map[String, String]): Tree = fieldType match {
-    case ModelParameterType("Map", innerTypeParameters) => {
+  private def getClassType(fieldType: ClassModelParameterType, termPackageMap: Map[String, String]): Tree = fieldType match {
+    case ClassModelParameterType("Map", innerTypeParameters) => {
       TypeApply(Ident(TermName("Map")), List(getClassType(innerTypeParameters.head, termPackageMap: Map[String, String]), getClassType(innerTypeParameters.drop(1).head, termPackageMap: Map[String, String])))
     }
-    case ModelParameterType("List", innerTypeParameters) => {
+    case ClassModelParameterType("List", innerTypeParameters) => {
       TypeApply(Ident(TermName("List")), List(getClassType(innerTypeParameters.head, termPackageMap: Map[String, String])))
     }
-    case ModelParameterType("Long", _) => Ident(TermName("Long"))
-    case ModelParameterType("String", _) => Ident(TermName("String"))
-    case ModelParameterType("Float", _) => Ident(TermName("Float"))
-    case ModelParameterType("Boolean", _) => Ident(TermName("Boolean"))
-    case ModelParameterType(typeName, _) => {
+    case ClassModelParameterType("Long", _) => Ident(TermName("Long"))
+    case ClassModelParameterType("String", _) => Ident(TermName("String"))
+    case ClassModelParameterType("Float", _) => Ident(TermName("Float"))
+    case ClassModelParameterType("Boolean", _) => Ident(TermName("Boolean"))
+    case ClassModelParameterType(typeName, _) => {
       termPackageMap.get(typeName) match {
         case Some(fullyQualified) => Ident(TermName(fullyQualified))
         case None => Ident(TermName(typeName))
@@ -44,35 +44,35 @@ object JsReaderGen {
   }
 
   def JsReaderObjectRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
-    private def generateFieldErrors(className: String, fields: List[ModelParameter], errorType: Ident): List[Tree] = {
+    private def generateFieldErrors(className: String, fields: List[ClassModelParameter], errorType: Ident): List[Tree] = {
       fields.flatMap(f => {
         Seq(
-          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.value.capitalize}InvalidError"), Template(List(errorType), noSelfType, List())), // TODO: Should grab a JsReader[A] and be a case class
-          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.value.capitalize}MissingError"), Template(List(errorType), noSelfType, List()))
+          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.capitalize}InvalidError"), Template(List(errorType), noSelfType, List())), // TODO: Should grab a JsReader[A] and be a case class
+          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.capitalize}MissingError"), Template(List(errorType), noSelfType, List()))
         )
       })
     }
 
-    private def generateDefaultValue(parameter: ModelParameter, defaultValues: ModelDefaultParameterValues): Tree = {
-      defaultValues.map.get(parameter.term.value) match {
+    private def generateDefaultValue(parameter: ClassModelParameter, defaultValues: Map[String, Any]): Tree = {
+      defaultValues.get(parameter.term) match {
         case Some(value) => Apply(Ident(TermName("Some")), List(Literal(Constant(value))))
         case None => Ident(TermName("None"))
       }
     }
 
-    private def generateFieldExtractors(className: String, fields: List[ModelParameter], defaultValues: ModelDefaultParameterValues, customReaders: Map[String, Tree], errorType: Ident): List[Tree] = {
+    private def generateFieldExtractors(className: String, fields: List[ClassModelParameter], defaultValues: Map[String, Any], customReaders: Map[String, Tree], errorType: Ident): List[Tree] = {
       fields.map(f => {
         val modelType = getClassType(f.parameterType, termPackageMap)
-        val fieldReaderName = s"${f.term.value}Reader"
+        val fieldReaderName = s"${f.term}Reader"
 
         val fieldExtractor = Apply(
           TypeApply(Ident(TermName("JsonObjectValueExtractor")), List(modelType, errorType)),
           List(
-            AssignOrNamedArg(Ident(TermName("key")), Literal(Constant(f.term.value))),
-            AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"$className${f.term.value.capitalize}MissingError"))),
+            AssignOrNamedArg(Ident(TermName("key")), Literal(Constant(f.term))),
+            AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"$className${f.term.capitalize}MissingError"))),
             AssignOrNamedArg(Ident(TermName("invalid")), Function(
               List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-              Ident(TermName(s"$className${f.term.value.capitalize}InvalidError"))
+              Ident(TermName(s"$className${f.term.capitalize}InvalidError"))
             )),
             AssignOrNamedArg(Ident(TermName("default")), generateDefaultValue(f, defaultValues))
           )
@@ -85,24 +85,24 @@ object JsReaderGen {
 
         ValDef(
           Modifiers(),
-          TermName(s"${f.term.value}Extractor"),
+          TermName(s"${f.term}Extractor"),
           TypeTree(),
           fieldExtractorImplicit
         )
       })
     }
 
-    private def generateModelMap(fields: List[ModelParameter], inner: Tree): Tree = fields match {
+    private def generateModelMap(fields: List[ClassModelParameter], inner: Tree): Tree = fields match {
       case f :: fs => {
         val method = if (fs == Nil) "map" else "flatMap"
         Apply(
           Select(
-            Apply(Ident(TermName(s"${f.term.value}Extractor")), List(Ident(TermName("map")))),
+            Apply(Ident(TermName(s"${f.term}Extractor")), List(Ident(TermName("map")))),
             TermName(method)
           ),
           List(
             Function(
-              List(ValDef(Modifiers(Flag.PARAM), TermName(f.term.value), TypeTree(), EmptyTree)),
+              List(ValDef(Modifiers(Flag.PARAM), TermName(f.term), TypeTree(), EmptyTree)),
               Block(List(), generateModelMap(fs, inner))
             )
           )
@@ -111,12 +111,12 @@ object JsReaderGen {
       case Nil => inner
     }
 
-    private def generateModelAssignments(fields: List[ModelParameter]): List[AssignOrNamedArg] = {
-      fields.map(f => AssignOrNamedArg(Ident(TermName(f.term.value)), Ident(TermName(f.term.value))))
+    private def generateModelAssignments(fields: List[ClassModelParameter]): List[AssignOrNamedArg] = {
+      fields.map(f => AssignOrNamedArg(Ident(TermName(f.term)), Ident(TermName(f.term))))
     }
 
-    def generate(model: Model): Tree = {
-      val modelName = model.name.value
+    def generate(model: ClassModel): Tree = {
+      val modelName = model.name
       val modelClass = Ident(TermName(model.fullyQualifiedName))
       val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
 
@@ -168,13 +168,13 @@ object JsReaderGen {
   }
 
   def JsReaderParameterRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
-    def generate(model: Model): Tree = {
-      val modelName = model.name.value
+    def generate(model: ClassModel): Tree = {
+      val modelName = model.name
       val modelClass = Ident(TermName(model.fullyQualifiedName))
       val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
 
       val parameter = model.parameters.head
-      val fieldReaderName = s"${parameter.term.value}Reader"
+      val fieldReaderName = s"${parameter.term}Reader"
 
       val fieldAsApply = TypeApply(Select(Ident(TermName("value")), TermName("as")), List(getClassType(parameter.parameterType, termPackageMap)))
       val fieldApplyImplicit = model.customReaders.get(fieldReaderName) match {
@@ -184,7 +184,7 @@ object JsReaderGen {
 
       ModuleDef(
         Modifiers(),
-        TermName(s"${model.name.value}JsReader"),
+        TermName(s"${model.name}JsReader"),
         Template(
           List(AppliedTypeTree(Ident(TypeName("JsReader")), List(Ident(TypeName(model.fullyQualifiedName))))),
           noSelfType,

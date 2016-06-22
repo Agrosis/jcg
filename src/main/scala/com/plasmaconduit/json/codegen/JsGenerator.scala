@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 
 import com.plasmaconduit.json.codegen.gen.{JsReaderGen, JsWriterGen}
 
-import com.plasmaconduit.json.codegen.model.{ModelParameterRep, ModelObjectRep, ModelGenerator, Model}
+import com.plasmaconduit.json.codegen.model._
 import com.plasmaconduit.json.codegen.utils.PackageTraverser
 import com.plasmaconduit.json.codegen.utils.Path._
 
@@ -13,28 +13,43 @@ import scala.reflect.runtime.universe._
 object JsGenerator {
 
   def generateJsWriterImplicit(model: Model): Tree = {
-    ValDef(Modifiers(Flag.IMPLICIT | Flag.LAZY), TermName(s"${model.name.value}JsWriterImplicit"), TypeTree(), Ident(TermName(s"${model.name.value}JsWriter")))
+    ValDef(Modifiers(Flag.IMPLICIT | Flag.LAZY), TermName(s"${model.name}JsWriterImplicit"), TypeTree(), Ident(TermName(s"${model.name}JsWriter")))
   }
 
 
-  def generateJsWriter(model: Model): Tree = {
-    model.genWriterRep match {
-      case Some(ModelObjectRep(ignore)) => JsWriterGen.JsWriterObjectRepGen(ignore).generate(model)
-      case Some(ModelParameterRep) => JsWriterGen.JsWriterParameterRepGen().generate(model)
-      case None => EmptyTree
+  def generateJsWriter(model: Model, traitModels: List[TraitModel], classModels: List[ClassModel], termPackageMap: Map[String, String]): Tree = {
+    model match {
+      case cm: ClassModel => {
+        val isChild = cm.parents.foldLeft(false)((b, a) => b || traitModels.exists(_.name == a))
+        cm.genWriterRep match {
+          case Some(ModelObjectRep(ignore)) => JsWriterGen.JsWriterObjectRepGen(ignore, isChild).generate(cm)
+          case Some(ModelParameterRep) => JsWriterGen.JsWriterParameterRepGen().generate(cm)
+          case None => EmptyTree
+        }
+      }
+      case tm: TraitModel => {
+        val children = classModels.filter(_.hasParent(tm.name))
+
+        JsWriterGen.JsWriterTraitGen(children, termPackageMap).generate(tm)
+      }
     }
   }
 
   def generateJsReaderImplicit(model: Model): Tree = {
-    ValDef(Modifiers(Flag.IMPLICIT | Flag.LAZY), TermName(s"${model.name.value}JsReaderImplicit"), TypeTree(), Ident(TermName(s"${model.name.value}JsReader")))
+    ValDef(Modifiers(Flag.IMPLICIT | Flag.LAZY), TermName(s"${model.name}JsReaderImplicit"), TypeTree(), Ident(TermName(s"${model.name}JsReader")))
   }
 
 
   def generateJsReader(model: Model, termPackageMap: Map[String, String]): Tree = {
-    model.genReaderRep match {
-      case Some(ModelObjectRep(ignore)) => JsReaderGen.JsReaderObjectRepGen(termPackageMap).generate(model)
-      case Some(ModelParameterRep) => JsReaderGen.JsReaderParameterRepGen(termPackageMap).generate(model)
-      case None => EmptyTree
+    model match {
+      case cm: ClassModel => {
+        cm.genReaderRep match {
+          case Some(ModelObjectRep(ignore)) => JsReaderGen.JsReaderObjectRepGen(termPackageMap).generate(cm)
+          case Some(ModelParameterRep) => JsReaderGen.JsReaderParameterRepGen(termPackageMap).generate(cm)
+          case None => EmptyTree
+        }
+      }
+      case tm: TraitModel => EmptyTree
     }
   }
 
@@ -52,7 +67,7 @@ object JsGenerator {
 
     val models = PackageTraverser.getAllClassesInPackage(rootDir, sourceDir, searchPackage).flatMap(file => {
       val code = scala.io.Source.fromFile(file.getAbsolutePath).mkString
-      val models = ModelGenerator.generateModelsFor(code)
+      val models = ModelCollector.generateModelsFor(code)
 
       println(s"Visiting ${file.getAbsolutePath}...")
       println(s"Found ${models.length} models...")
@@ -60,9 +75,19 @@ object JsGenerator {
       models
     })
 
-    val termPackageMap = models.map(m => (m.name.value, m.fullyQualifiedName)).toMap
-    val writers = models.filter(_.genWriterRep.isDefined)
-    val readers = models.filter(_.genReaderRep.isDefined)
+    val classModels = models.flatMap {
+      case cm: ClassModel => List(cm)
+      case _ => List()
+    }
+
+    val traitModels = models.flatMap {
+      case tm: TraitModel => List(tm)
+      case _ => List()
+    }
+
+    val termPackageMap = models.map(m => (m.name, m.fullyQualifiedName)).toMap
+    val writers = models.filter(_.hasParent("GenWriter"))
+    val readers = models.filter(_.hasParent("GenReader"))
 
     val genJsWriters = PackageDef(
       Ident(TermName(s"$outputPackage.writers")),
@@ -74,7 +99,7 @@ object JsGenerator {
           Template(
             List(Ident(TermName("AnyRef"))),
             noSelfType,
-            writers.map(generateJsWriterImplicit) ++ writers.map(generateJsWriter)
+            writers.map(generateJsWriterImplicit) ++ writers.map(generateJsWriter(_, traitModels, classModels, termPackageMap))
           )
         )
       )

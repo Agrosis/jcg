@@ -3,7 +3,15 @@ package com.plasmaconduit.json.codegen.model
 import scala.reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 
-object ModelGenerator {
+object ModelCollector {
+
+  private def getParents(parents: List[Tree]): List[String] = parents match {
+    case x :: xs => x match {
+      case Ident(TypeName(name)) => name :: getParents(xs)
+      case _ => getParents(xs)
+    }
+    case Nil => Nil
+  }
 
   @annotation.tailrec
   private def parentExists(parents: List[Tree], parent: String): Boolean = parents match {
@@ -14,19 +22,19 @@ object ModelGenerator {
     case Nil => false
   }
 
-  private def getTypeParameters(typeParameters: List[Tree]): List[ModelParameterType] = {
-    typeParameters.map{
-      case Ident(TypeName(name)) => ModelParameterType(name, List())
-      case AppliedTypeTree(Ident(TypeName(name)), typeParameters) => ModelParameterType(name, getTypeParameters(typeParameters))
+  private def getTypeParameters(typeParameters: List[Tree]): List[ClassModelParameterType] = {
+    typeParameters.map {
+      case Ident(TypeName(name)) => ClassModelParameterType(name, List())
+      case AppliedTypeTree(Ident(TypeName(name)), typeParameters) => ClassModelParameterType(name, getTypeParameters(typeParameters))
     }
   }
 
-  private def getParameters(ast: List[Tree]): List[ModelParameter] = ast match {
+  private def getParameters(ast: List[Tree]): List[ClassModelParameter] = ast match {
     case ValDef(modifiers, TermName(termName), Ident(TypeName(typeName)), eq) :: xs if modifiers.hasFlag(Flag.CASEACCESSOR) => {
-      ModelParameter(ModelParameterTerm(termName), ModelParameterType(typeName, List())) :: getParameters(xs)
+      ClassModelParameter(termName, ClassModelParameterType(typeName, List())) :: getParameters(xs)
     }
     case ValDef(modifiers, TermName(termName), AppliedTypeTree(Ident(TypeName(typeName)), typeParameters), eq) :: xs if modifiers.hasFlag(Flag.CASEACCESSOR) => {
-      ModelParameter(ModelParameterTerm(termName), ModelParameterType(typeName, getTypeParameters(typeParameters))) :: getParameters(xs)
+      ClassModelParameter(termName, ClassModelParameterType(typeName, getTypeParameters(typeParameters))) :: getParameters(xs)
     }
     case x :: xs => getParameters(xs)
     case Nil => Nil
@@ -91,19 +99,30 @@ object ModelGenerator {
         body.flatMap(childAst => traverseForModels(childAst, s"$packageName.$objectName"))
       }
       case ClassDef(modifiers, TypeName(name), typeDef, Template(parents, self, body)) if parentExists(parents, "GenReader") || parentExists(parents, "GenWriter") => {
-        val parameters = getParameters(body)
-        List(
-          Model(
-            ModelName(name),
-            ModelPackage(packageName),
-            parameters,
-            ModelDefaultParameterValues(getDefaultParameters(body)),
-            if (parentExists(parents, "GenReader")) getRepresentation(body, "readerRep") else None,
-            if (parentExists(parents, "GenWriter")) getRepresentation(body, "writerRep") else None,
-            getCustomFields(body, "Reader"),
-            getCustomFields(body, "Writer")
+        if (modifiers.hasFlag(Flag.SEALED) && modifiers.hasFlag(Flag.TRAIT)) {
+          List(
+            TraitModel(
+              name = name,
+              packageName = packageName,
+              parents = getParents(parents)
+            )
           )
-        )
+        } else {
+          val parameters = getParameters(body)
+          List(
+            ClassModel(
+              name = name,
+              packageName = packageName,
+              parents = getParents(parents),
+              parameters = parameters,
+              defaultValues = getDefaultParameters(body),
+              genReaderRep = getRepresentation(body, "readerRep"),
+              genWriterRep = getRepresentation(body, "writerRep"),
+              customReaders = getCustomFields(body, "Reader"),
+              customWriters = getCustomFields(body, "Writer")
+            )
+          )
+        }
       }
       case _ => List()
     }
@@ -111,6 +130,16 @@ object ModelGenerator {
 
   def generateModelsFor(code: String): List[Model] = {
     val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
+
+//    println((
+//      Match(
+//        Ident(TermName("x")),
+//        List(
+//          CaseDef(Bind(TermName("i"), Typed(Ident(termNames.WILDCARD), Ident(TypeName("Something")))), EmptyTree, Literal(Constant(3))),
+//          CaseDef(Bind(TermName("i"), Typed(Ident(termNames.WILDCARD), Ident(TypeName("Thing")))), EmptyTree, Literal(Constant(7)))
+//        )
+//      )
+//    ))
 
     "^(\\s+)?package (.*)".r.findFirstIn(code).map(_.split(" ")(1)) match {
       case Some(packageName) => {

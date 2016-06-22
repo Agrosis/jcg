@@ -1,5 +1,4 @@
 package json.readers {
-  import java.time.LocalDateTime;
   import com.plasmaconduit.json._;
   import com.plasmaconduit.validation._;
   object GenJsReaders extends AnyRef {

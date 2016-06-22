@@ -1,11 +1,11 @@
 package com.plasmaconduit.json.codegen.gen
 
-import com.plasmaconduit.json.codegen.model.{ModelParameterType, ModelParameter, Model}
+import com.plasmaconduit.json.codegen.model._
 
 import scala.reflect.runtime.universe._
 
-sealed trait JsWriterGen {
-  def generate(model: Model): Tree
+sealed trait JsWriterGen[A <: Model] {
+  def generate(model: A): Tree
 }
 
 object JsWriterGen {
@@ -18,8 +18,8 @@ object JsWriterGen {
     List(tree)
   }
 
-  private def generateJsObjectMapValues(tree: Tree, typeParameter: ModelParameterType): Tree = typeParameter match {
-    case ModelParameterType("Map", innerTypeParameters) => {
+  private def generateJsObjectMapValues(tree: Tree, typeParameter: ClassModelParameterType): Tree = typeParameter match {
+    case ClassModelParameterType("Map", innerTypeParameters) => {
       Apply(
         Select(tree, TermName("mapValues")),
         List(
@@ -30,7 +30,7 @@ object JsWriterGen {
         )
       )
     }
-    case ModelParameterType("List", innerTypeParameters) => {
+    case ClassModelParameterType("List", innerTypeParameters) => {
       Apply(
         Select(tree, TermName("mapValues")),
         List(
@@ -41,35 +41,35 @@ object JsWriterGen {
         )
       )
     }
-    case ModelParameterType("Long", _) => {
+    case ClassModelParameterType("Long", _) => {
       Apply(
         Select(tree, TermName("mapValues")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsLong")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType("String", _) => {
+    case ClassModelParameterType("String", _) => {
       Apply(
         Select(tree, TermName("mapValues")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsString")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType("Float", _) => {
+    case ClassModelParameterType("Float", _) => {
       Apply(
         Select(tree, TermName("mapValues")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsFloat")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType("Boolean", _) => {
+    case ClassModelParameterType("Boolean", _) => {
       Apply(
         Select(tree, TermName("map")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsBoolean")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType(name, _) => tree
+    case ClassModelParameterType(name, _) => tree
   }
 
-  private def generateJsArrayMap(tree: Tree, typeParameter: ModelParameterType): Tree = typeParameter match {
-    case ModelParameterType("Map", innerTypeParameters) => {
+  private def generateJsArrayMap(tree: Tree, typeParameter: ClassModelParameterType): Tree = typeParameter match {
+    case ClassModelParameterType("Map", innerTypeParameters) => {
       Apply(
         Select(tree, TermName("map")),
         List(
@@ -80,7 +80,7 @@ object JsWriterGen {
         )
       )
     }
-    case ModelParameterType("List", innerTypeParameters) => {
+    case ClassModelParameterType("List", innerTypeParameters) => {
       Apply(
         Select(tree, TermName("map")),
         List(
@@ -91,31 +91,31 @@ object JsWriterGen {
         )
       )
     }
-    case ModelParameterType("Long", _) => {
+    case ClassModelParameterType("Long", _) => {
       Apply(
         Select(tree, TermName("map")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsLong")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType("String", _) => {
+    case ClassModelParameterType("String", _) => {
       Apply(
         Select(Ident(TermName("x")), TermName("map")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsString")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType("Float", _) => {
+    case ClassModelParameterType("Float", _) => {
       Apply(
         Select(Ident(TermName("x")), TermName("map")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsFloat")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType("Boolean", _) => {
+    case ClassModelParameterType("Boolean", _) => {
       Apply(
         Select(Ident(TermName("x")), TermName("map")),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsBoolean")), List(Ident(TermName("x"))))))
       )
     }
-    case ModelParameterType(name, _) => tree
+    case ClassModelParameterType(name, _) => tree
   }
 
   private def generateCustomWriters(customWriters: Map[String, Tree]): List[Tree] = {
@@ -124,9 +124,9 @@ object JsWriterGen {
     }
   }
 
-  def JsWriterObjectRepGen(ignore: List[String]) = new JsWriterGen {
-    private def generateFieldOutput(field: ModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
-      val fieldName = field.term.value
+  def JsWriterObjectRepGen(ignore: List[String], isChild: Boolean) = new JsWriterGen[ClassModel] {
+    private def generateFieldOutput(field: ClassModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
+      val fieldName = field.term
       val fieldWriterName = s"${fieldName}Writer"
       val fieldSelect = Select(Ident(TermName(refName)), TermName(fieldName))
 
@@ -139,28 +139,34 @@ object JsWriterGen {
         }
         case None => {
           field.parameterType match {
-            case ModelParameterType("Map", typeParameters) => {
+            case ClassModelParameterType("Map", typeParameters) => {
               generateJsObjectMapValues(fieldSelect, typeParameters.drop(1).head)
             }
-            case ModelParameterType("List", typeParameters) => {
+            case ClassModelParameterType("List", typeParameters) => {
               generateJsArrayMap(fieldSelect, typeParameters.head)
             }
-            case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
-            case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
-            case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
-            case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
-            case ModelParameterType(name, _) => fieldSelect
+            case ClassModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
+            case ClassModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
+            case ClassModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
+            case ClassModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
+            case ClassModelParameterType(name, _) => fieldSelect
           }
         }
       }
 
-      Apply(Select(Ident(TermName("scala")), TermName("Tuple2")), List(Literal(Constant(field.term.value)), value))
+      Apply(Ident(TermName("Tuple2")), List(Literal(Constant(field.term)), value))
     }
 
-    override def generate(model: Model): Tree = {
+    override def generate(model: ClassModel): Tree = {
+      val fieldMappings = model.parameters.filter(p => !ignore.contains(p.term)).map(field => generateFieldOutput(field, "m", model.customWriters))
+
+      val withType =
+        if (isChild) fieldMappings ++ Apply(Ident(TermName("Tuple2")), List(Literal(Constant("type")), Literal(Constant(model.name))))
+        else fieldMappings
+
       ModuleDef(
         Modifiers(),
-        TermName(s"${model.name.value}JsWriter"),
+        TermName(s"${model.name}JsWriter"),
         Template(
           List(AppliedTypeTree(Ident(TypeName("JsWriter")), List(Ident(TypeName(model.fullyQualifiedName))))),
           noSelfType,
@@ -174,7 +180,7 @@ object JsWriterGen {
               Ident(TypeName("JsValue")),
               Block(
                 List(),
-                Apply(Ident(TermName("JsObject")), model.parameters.filter(p => !ignore.contains(p.term.value)).map(field => generateFieldOutput(field, "m", model.customWriters)))
+                Apply(Ident(TermName("JsObject")), withType)
               )
             )
           )
@@ -183,9 +189,9 @@ object JsWriterGen {
     }
   }
 
-  def JsWriterParameterRepGen() = new JsWriterGen {
-    private def generateModelOutput(field: ModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
-      val fieldName = field.term.value
+  def JsWriterParameterRepGen() = new JsWriterGen[ClassModel] {
+    private def generateModelOutput(field: ClassModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
+      val fieldName = field.term
       val fieldWriterName = s"${fieldName}Writer"
       val fieldSelect = Select(Ident(TermName(refName)), TermName(fieldName))
 
@@ -198,26 +204,26 @@ object JsWriterGen {
         }
         case None => {
           field.parameterType match {
-            case ModelParameterType("Map", typeParameters) => {
+            case ClassModelParameterType("Map", typeParameters) => {
               Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(fieldSelect, typeParameters.drop(1).head)))
             }
-            case ModelParameterType("List", typeParameters) => {
+            case ClassModelParameterType("List", typeParameters) => {
               Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(fieldSelect, typeParameters.head)))
             }
-            case ModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
-            case ModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
-            case ModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
-            case ModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
-            case ModelParameterType(name, _) => fieldSelect
+            case ClassModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
+            case ClassModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
+            case ClassModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
+            case ClassModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
+            case ClassModelParameterType(name, _) => fieldSelect
           }
         }
       }
     }
 
-    override def generate(model: Model): Tree = {
+    override def generate(model: ClassModel): Tree = {
       ModuleDef(
         Modifiers(),
-        TermName(s"${model.name.value}JsWriter"),
+        TermName(s"${model.name}JsWriter"),
         Template(
           List(AppliedTypeTree(Ident(TypeName("JsWriter")), List(Ident(TypeName(model.fullyQualifiedName))))),
           noSelfType,
@@ -232,6 +238,49 @@ object JsWriterGen {
               Block(
                 List(),
                 generateModelOutput(model.parameters.head, "m", model.customWriters)
+              )
+            )
+          )
+        )
+      )
+    }
+  }
+
+  def JsWriterTraitGen(children: List[ClassModel], termPackageMap: Map[String, String]) = new JsWriterGen[TraitModel] {
+    def generateCases(children: List[ClassModel]): List[CaseDef] = {
+      children.map(c => {
+        val name = termPackageMap.getOrElse(c.name, c.name)
+        CaseDef(
+          Bind(TermName("c"), Typed(Ident(termNames.WILDCARD), Ident(TypeName(name)))),
+          EmptyTree,
+          Apply(
+            Select(Ident(TermName(s"${c.name}JsWriter")), TermName("write")),
+            List(Ident(TermName("c")))
+          )
+        )
+      })
+    }
+
+    override def generate(model: TraitModel): Tree = {
+      ModuleDef(
+        Modifiers(),
+        TermName(s"${model.name}JsWriter"),
+        Template(
+          List(AppliedTypeTree(Ident(TypeName("JsWriter")), List(Ident(TypeName(model.fullyQualifiedName))))),
+          noSelfType,
+          List(
+            DefDef(
+              Modifiers(Flag.OVERRIDE),
+              TermName("write"),
+              List(),
+              List(List(ValDef(Modifiers(Flag.PARAM), TermName("m"), Ident(TypeName(model.fullyQualifiedName)), EmptyTree))),
+              Ident(TypeName("JsValue")),
+              Block(
+                List(),
+                Match(
+                  Ident(TermName("m")),
+                  generateCases(children)
+                )
               )
             )
           )

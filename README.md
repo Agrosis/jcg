@@ -126,8 +126,9 @@ The default representation `jcg` uses for a reader or a writer is `GenObjectRep(
 final case class User(id: Int,
                       username: String,
                       password: String,
+                      ssn: String,
                       email: String, items: List[Item]) extends GenWriter {
-  val writerRep = GenWriterRep(List("password"))
+  val writerRep = GenWriterRep(Ignore("password", "ssn"))
 }
 ```
 

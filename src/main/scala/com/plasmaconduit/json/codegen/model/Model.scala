@@ -2,22 +2,29 @@ package com.plasmaconduit.json.codegen.model
 
 import scala.reflect.runtime.universe._
 
-final case class Model(name: ModelName,
-                       modelPackage: ModelPackage,
-                       parameters: List[ModelParameter],
-                       defaultValues: ModelDefaultParameterValues,
-                       genReaderRep: Option[ModelRep],
-                       genWriterRep: Option[ModelRep],
-                       customReaders: Map[String, Tree],
-                       customWriters: Map[String, Tree]) {
+sealed trait Model {
+  val name: String
+  val packageName: String
+  val parents: List[String]
 
-  def fullyQualifiedName: String = s"${modelPackage.value}.${name.value}"
+  def fullyQualifiedName: String = s"${packageName}.${name}"
 
+  def hasParent(parent: String): Boolean = parents.exists(_ == parent)
 }
-final case class ModelPackage(value: String)
-final case class ModelName(value: String)
 
-final case class ModelParameter(term: ModelParameterTerm, parameterType: ModelParameterType)
-final case class ModelParameterTerm(value: String)
-final case class ModelParameterType(value: String, typeParameters: List[ModelParameterType])
-final case class ModelDefaultParameterValues(map: Map[String, Any])
+final case class TraitModel(name: String,
+                            packageName: String,
+                            parents: List[String]) extends Model
+
+final case class ClassModel(name: String,
+                            packageName: String,
+                            parents: List[String],
+                            parameters: List[ClassModelParameter],
+                            defaultValues: Map[String, Any],
+                            genReaderRep: Option[ModelRep],
+                            genWriterRep: Option[ModelRep],
+                            customReaders: Map[String, Tree],
+                            customWriters: Map[String, Tree]) extends Model
+
+final case class ClassModelParameter(term: String, parameterType: ClassModelParameterType)
+final case class ClassModelParameterType(value: String, typeParameters: List[ClassModelParameterType])
