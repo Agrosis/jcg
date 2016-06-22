@@ -185,9 +185,36 @@ object Item {
 
 ```
 
+ADT reader/writer generation
+----------------------------
+It is common to have an algebratic data type for a model, that is, a set of models that are inhabitants of some parent type. For example, we can define an ADT for vehicles:
+
+```scala
+sealed trait Vehicle
+final case class Car(seats: Int) extends Vehicle
+final case class Truck(space: Int) extends Vehicle
+final case class Boat(seats: Int) extends Vehicle
+```
+
+Even though `Vehicle` isn't a concrete model, we would like to be able to serialize a `Vehicle` as the correct inhabitant. It would also be convenient to deserialize a `Vehicle`, as one of its inhabitants.
+
+To solve this, we include a `type` field in the serialized JSON that specifies which inhabitant the JSON object represents. To specify an ADT for generation:
+
+```scala
+sealed trait Vehicle extends GenWriter with GenReader
+final case class Car(seats: Int) extends Vehicle with GenWriter with GenReader
+final case class Truck(space: Int) extends Vehicle with GenWriter with GenReader
+final case class Boat(seats: Int) extends Vehicle with GenWriter with GenReader
+```
+
+There are a few things to note when using ADT generation:
+1. The inhabitants of the trait must extend the `Gen` traits that the trait does. Otherwise there will be compiler warnings for the generated code.
+2. The inhabitants of the trait must have a `GenObjectRep` representation.
+3. The inhabitants of the trait should not have a `type` field.
+
 Caveats
 -------
-`jcg` is not a full-fledged compiler or typechecker, so when specifying fields like `LocalDateTime` or custom readers/writers, try to use the fully qualified name to types, otherwise you will have to resolve these errors in the generate code.
+`jcg` is not a full-fledged compiler or typechecker, so when specifying fields like `LocalDateTime` or custom readers/writers, try to use the fully qualified name to types, otherwise you will have to resolve these errors in the generate code. We should also be able to serialize/deserialize each inhabitant of `Vehicle` individually without any problems.
 
 If you use a model that will be tracked by `jcg` as a field in another model, its fully qualified name will automatically be determined and used in the generated code for your convenience.
 
