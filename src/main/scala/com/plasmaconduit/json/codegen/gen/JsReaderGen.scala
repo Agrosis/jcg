@@ -1,11 +1,11 @@
 package com.plasmaconduit.json.codegen.gen
 
-import com.plasmaconduit.json.codegen.model.{ClassModelParameterType, ClassModelParameter, ClassModel}
+import com.plasmaconduit.json.codegen.model._
 
 import scala.reflect.runtime.universe._
 
-sealed trait JsReaderGen {
-  def generate(model: ClassModel): Tree
+sealed trait JsReaderGen[A <: Model] {
+  def generate(model: A): Tree
 }
 
 object JsReaderGen {
@@ -43,12 +43,12 @@ object JsReaderGen {
     }
   }
 
-  def JsReaderObjectRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
-    private def generateFieldErrors(className: String, fields: List[ClassModelParameter], errorType: Ident): List[Tree] = {
+  def JsReaderObjectRepGen(termPackageMap: Map[String, String]) = new JsReaderGen[ClassModel] {
+    private def generateFieldErrors(className: String, fields: List[ClassModelParameter], errorTrait: Ident): List[Tree] = {
       fields.flatMap(f => {
         Seq(
-          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.capitalize}InvalidError"), Template(List(errorType), noSelfType, List())), // TODO: Should grab a JsReader[A] and be a case class
-          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.capitalize}MissingError"), Template(List(errorType), noSelfType, List()))
+          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.capitalize}InvalidError"), Template(List(errorTrait), noSelfType, List())), // TODO: Should grab a JsReader[A] and be a case class
+          ModuleDef(Modifiers(Flag.CASE), TermName(s"$className${f.term.capitalize}MissingError"), Template(List(errorTrait), noSelfType, List()))
         )
       })
     }
@@ -167,7 +167,7 @@ object JsReaderGen {
     }
   }
 
-  def JsReaderParameterRepGen(termPackageMap: Map[String, String]) = new JsReaderGen {
+  def JsReaderParameterRepGen(termPackageMap: Map[String, String]) = new JsReaderGen[ClassModel] {
     def generate(model: ClassModel): Tree = {
       val modelName = model.name
       val modelClass = Ident(TermName(model.fullyQualifiedName))
@@ -227,6 +227,139 @@ object JsReaderGen {
                       Apply(modelClass, List(Ident(TermName("f"))))
                     )
                   )
+                )
+              )
+            )
+          )
+        )
+      )
+    }
+  }
+
+  def JsReaderTraitGen(children: List[ClassModel], termPackageMap: Map[String, String]) = new JsReaderGen[TraitModel] {
+    private def generateChildErrors(modelName: String, children: List[ClassModel], errorTrait: Ident): List[Tree] = {
+      children.map(c => ModuleDef(Modifiers(Flag.CASE), TermName(s"$modelName${c.name}Error"), Template(List(errorTrait), noSelfType, List())))
+    }
+
+    private def generateCases(modelName: String, children: List[ClassModel]): List[CaseDef] = {
+      children.map(c => {
+        CaseDef(
+          Literal(Constant(c.name)),
+          EmptyTree,
+          Apply(
+            Select(
+              Apply(
+                Select(Ident(TermName(s"${c.name}JsReader")), TermName("read")),
+                List(Ident(TermName("obj")))
+              ),
+              TermName("mapError")
+            ),
+            List(
+              Function(
+                List(ValDef(Modifiers(Flag.PARAM), TermName("e"), TypeTree(), EmptyTree)),
+                Ident(TermName(s"$modelName${c.name}Error"))
+              )
+            )
+          )
+        )
+      }) :+ CaseDef(Ident(termNames.WILDCARD), EmptyTree, Apply(Ident(TermName("Failure")), List(Ident(TermName(s"${modelName}TypeInvalidError")))))
+    }
+
+    override def generate(model: TraitModel): Tree = {
+      val modelName = model.name
+      val modelClass = Ident(TermName(model.fullyQualifiedName))
+      val modelJsReaderError = Ident(TermName(s"${modelName}JsReaderError"))
+
+      ModuleDef(
+        Modifiers(),
+        TermName(s"${modelName}JsReader"),
+        Template(
+          List(AppliedTypeTree(Ident(TypeName("JsReader")), List(Ident(TypeName(model.fullyQualifiedName))))),
+          noSelfType,
+          combine(
+            TypeDef(Modifiers(Flag.OVERRIDE), TypeName("JsReaderFailure"), List(), modelJsReaderError),
+            ClassDef(Modifiers(Flag.TRAIT | Flag.SEALED), TypeName(s"${modelName}JsReaderError"), List(), Template(List(Ident(TermName(("AnyRef")))), noSelfType, List())),
+            ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}NotJsonObject"), Template(List(modelJsReaderError), noSelfType, List())),
+            ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}TypeInvalidJsonTypeError"), Template(List(modelJsReaderError), noSelfType, List())),
+            ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}TypeInvalidError"), Template(List(modelJsReaderError), noSelfType, List())),
+            ModuleDef(Modifiers(Flag.CASE), TermName(s"${modelName}TypeMissingError"), Template(List(modelJsReaderError), noSelfType, List())),
+
+            generateChildErrors(modelName, children, modelJsReaderError),
+
+            ValDef(
+              Modifiers(),
+              TermName("typeExtractor"),
+              TypeTree(),
+              Apply(
+                TypeApply(Ident(TermName("JsonObjectValueExtractor")), List(Ident(TermName("String")), modelJsReaderError)),
+                List(
+                  AssignOrNamedArg(Ident(TermName("key")), Literal(Constant("type"))),
+                  AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"${modelName}TypeMissingError"))),
+                  AssignOrNamedArg(Ident(TermName("invalid")), Function(
+                    List(ValDef(Modifiers(Flag.PARAM), TermName("e"), TypeTree(), EmptyTree)),
+                    Ident(TermName(s"${modelName}TypeInvalidJsonTypeError"))
+                  )),
+                  AssignOrNamedArg(Ident(TermName("default")), Ident(TermName("None")))
+                )
+              )
+            ),
+
+            DefDef(
+              Modifiers(Flag.OVERRIDE),
+              TermName("read"),
+              List(),
+              List(
+                List(ValDef(Modifiers(Flag.PARAM), TermName("value"), Ident(TypeName("JsValue")), EmptyTree))
+              ),
+              TypeApply(Ident(TermName("Validation")), List(modelJsReaderError, modelClass)),
+              Block(
+                List(),
+                Match(
+                  Ident(TermName("value")),
+                  List(
+                    CaseDef(
+                      Apply(Ident(TermName("JsObject")), List(Bind(TermName("map"), Ident(termNames.WILDCARD)))),
+                      EmptyTree,
+                      Apply(
+                        Select(
+                          Apply(Ident(TermName("typeExtractor")), List(Ident(TermName("map")))),
+                          TermName("flatMap")
+                        ),
+                        List(
+                          Function(
+                            List(ValDef(Modifiers(Flag.PARAM), TermName("childType"), TypeTree(), EmptyTree)),
+                            Apply(
+                              Ident(TermName("readFromType")),
+                              List(Ident(TermName("map")), Ident(TermName("childType")))
+                            )
+                          )
+                        )
+                      )
+                    ),
+                    CaseDef(Ident(termNames.WILDCARD), EmptyTree, Apply(Ident(TermName("Failure")), Ident(TermName(s"${modelName}NotJsonObject"))))
+                  )
+                )
+              )
+            ),
+
+            DefDef(
+              Modifiers(),
+              TermName("readFromType"),
+              List(),
+              List(
+                List(
+                  ValDef(Modifiers(Flag.PARAM), TermName("map"), TypeApply(Ident(TermName("Map")), List(Ident(TermName("String")), Ident(TermName("JsValue")))), EmptyTree),
+                  ValDef(Modifiers(Flag.PARAM), TermName("childType"), Ident(TypeName("String")), EmptyTree)
+                )
+              ),
+              TypeApply(Ident(TermName("Validation")), List(modelJsReaderError, modelClass)),
+              Block(
+                List(
+                  ValDef(Modifiers(), TermName("obj"), TypeTree(), Apply(Ident(TermName("JsObject")), Ident(TermName("map"))))
+                ),
+                Match(
+                  Ident(TermName("childType")),
+                  generateCases(modelName, children)
                 )
               )
             )

@@ -40,7 +40,7 @@ object JsGenerator {
   }
 
 
-  def generateJsReader(model: Model, termPackageMap: Map[String, String]): Tree = {
+  def generateJsReader(model: Model, traitModels: List[TraitModel], classModels: List[ClassModel], termPackageMap: Map[String, String]): Tree = {
     model match {
       case cm: ClassModel => {
         cm.genReaderRep match {
@@ -49,7 +49,11 @@ object JsGenerator {
           case None => EmptyTree
         }
       }
-      case tm: TraitModel => EmptyTree
+      case tm: TraitModel => {
+        val children = classModels.filter(_.hasParent(tm.name))
+
+        JsReaderGen.JsReaderTraitGen(children, termPackageMap).generate(tm)
+      }
     }
   }
 
@@ -116,7 +120,7 @@ object JsGenerator {
           Template(
             List(Ident(TermName("AnyRef"))),
             noSelfType,
-            readers.map(generateJsReaderImplicit) ++ readers.map(generateJsReader(_, termPackageMap))
+            readers.map(generateJsReaderImplicit) ++ readers.map(generateJsReader(_, traitModels, classModels, termPackageMap))
           )
         )
       )

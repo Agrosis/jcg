@@ -1,5 +1,8 @@
 package json.readers {
-  import com.plasmaconduit.json._;
+
+import java.time.LocalDateTime
+
+import com.plasmaconduit.json._;
   import com.plasmaconduit.validation._;
   object GenJsReaders extends AnyRef {
     implicit lazy val DateJsReaderImplicit = DateJsReader;
@@ -7,6 +10,10 @@ package json.readers {
     implicit lazy val ItemJsReaderImplicit = ItemJsReader;
     implicit lazy val PhoneNumberJsReaderImplicit = PhoneNumberJsReader;
     implicit lazy val UserJsReaderImplicit = UserJsReader;
+    implicit lazy val VehicleJsReaderImplicit = VehicleJsReader;
+    implicit lazy val CarJsReaderImplicit = CarJsReader;
+    implicit lazy val TruckJsReaderImplicit = TruckJsReader;
+    implicit lazy val BoatJsReaderImplicit = BoatJsReader;
     object DateJsReader extends JsReader[org.company.app.models.Date] {
       override type JsReaderFailure = DateJsReaderError;
       sealed trait DateJsReaderError extends AnyRef;
@@ -100,6 +107,81 @@ package json.readers {
             }))
           }))
           case _ => Failure(UserNotJsonObject)
+        }
+      }
+    };
+    object VehicleJsReader extends JsReader[org.company.app.models.Vehicle] {
+      override type JsReaderFailure = VehicleJsReaderError;
+      sealed trait VehicleJsReaderError extends AnyRef;
+      case object VehicleNotJsonObject extends VehicleJsReaderError;
+      case object VehicleTypeInvalidJsonTypeError extends VehicleJsReaderError;
+      case object VehicleTypeInvalidError extends VehicleJsReaderError;
+      case object VehicleTypeMissingError extends VehicleJsReaderError;
+      case object VehicleCarError extends VehicleJsReaderError;
+      case object VehicleTruckError extends VehicleJsReaderError;
+      case object VehicleBoatError extends VehicleJsReaderError;
+      val typeExtractor = JsonObjectValueExtractor[String, VehicleJsReaderError](key = "type", missing = VehicleTypeMissingError, invalid = ((e) => VehicleTypeInvalidJsonTypeError), default = None);
+      override def read(value: JsValue): Validation[VehicleJsReaderError, org.company.app.models.Vehicle] = {
+        value match {
+          case JsObject((map @ _)) => typeExtractor(map).flatMap(((childType) => readFromType(map, childType)))
+          case _ => Failure(VehicleNotJsonObject)
+        }
+      };
+      def readFromType(map: Map[String, JsValue], childType: String): Validation[VehicleJsReaderError, org.company.app.models.Vehicle] = {
+        val obj = JsObject(map);
+        childType match {
+          case "Car" => CarJsReader.read(obj).mapError(((e) => VehicleCarError))
+          case "Truck" => TruckJsReader.read(obj).mapError(((e) => VehicleTruckError))
+          case "Boat" => BoatJsReader.read(obj).mapError(((e) => VehicleBoatError))
+          case _ => Failure(VehicleTypeInvalidError)
+        }
+      }
+    };
+    object CarJsReader extends JsReader[org.company.app.models.Car] {
+      override type JsReaderFailure = CarJsReaderError;
+      sealed trait CarJsReaderError extends AnyRef;
+      case object CarNotJsonObject extends CarJsReaderError;
+      case object CarSeatsInvalidError extends CarJsReaderError;
+      case object CarSeatsMissingError extends CarJsReaderError;
+      val seatsExtractor = JsonObjectValueExtractor[Int, CarJsReaderError](key = "seats", missing = CarSeatsMissingError, invalid = ((x) => CarSeatsInvalidError), default = None);
+      override def read(value: JsValue): Validation[CarJsReaderError, org.company.app.models.Car] = {
+        value match {
+          case JsObject((map @ _)) => seatsExtractor(map).map(((seats) => {
+            org.company.app.models.Car(seats = seats)
+          }))
+          case _ => Failure(CarNotJsonObject)
+        }
+      }
+    };
+    object TruckJsReader extends JsReader[org.company.app.models.Truck] {
+      override type JsReaderFailure = TruckJsReaderError;
+      sealed trait TruckJsReaderError extends AnyRef;
+      case object TruckNotJsonObject extends TruckJsReaderError;
+      case object TruckSpaceInvalidError extends TruckJsReaderError;
+      case object TruckSpaceMissingError extends TruckJsReaderError;
+      val spaceExtractor = JsonObjectValueExtractor[Int, TruckJsReaderError](key = "space", missing = TruckSpaceMissingError, invalid = ((x) => TruckSpaceInvalidError), default = None);
+      override def read(value: JsValue): Validation[TruckJsReaderError, org.company.app.models.Truck] = {
+        value match {
+          case JsObject((map @ _)) => spaceExtractor(map).map(((space) => {
+            org.company.app.models.Truck(space = space)
+          }))
+          case _ => Failure(TruckNotJsonObject)
+        }
+      }
+    };
+    object BoatJsReader extends JsReader[org.company.app.models.Boat] {
+      override type JsReaderFailure = BoatJsReaderError;
+      sealed trait BoatJsReaderError extends AnyRef;
+      case object BoatNotJsonObject extends BoatJsReaderError;
+      case object BoatSeatsInvalidError extends BoatJsReaderError;
+      case object BoatSeatsMissingError extends BoatJsReaderError;
+      val seatsExtractor = JsonObjectValueExtractor[Int, BoatJsReaderError](key = "seats", missing = BoatSeatsMissingError, invalid = ((x) => BoatSeatsInvalidError), default = None);
+      override def read(value: JsValue): Validation[BoatJsReaderError, org.company.app.models.Boat] = {
+        value match {
+          case JsObject((map @ _)) => seatsExtractor(map).map(((seats) => {
+            org.company.app.models.Boat(seats = seats)
+          }))
+          case _ => Failure(BoatNotJsonObject)
         }
       }
     }

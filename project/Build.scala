@@ -48,6 +48,7 @@ object Build extends Build {
       libraryDependencies   += "com.plasmaconduit" %% "json" % "0.23.0",
       libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
     )
+    .aggregate(traits)
     .dependsOn(traits)
 
   lazy val traits = Project("traits", file("./traits"))

@@ -12,11 +12,13 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val user = User(3, "Agro", "sykretz", "agro@jantox.com", List(Item(3, "Portal 2"), Item(4, "Left 4 Dead 2")))
+    val vehicle: Vehicle = Car(12)
 
     val payload = JsObject(
       "user" -> user,
       "phoneNumber" -> PhoneNumber("1234567890"),
-      "hours" -> DateRange(Date(LocalDateTime.now()), Date(LocalDateTime.now()))
+      "hours" -> DateRange(Date(LocalDateTime.now()), Date(LocalDateTime.now())),
+      "vehicle" -> vehicle
     )
 
     println(payload)
@@ -41,10 +43,16 @@ object Main {
       "end" -> "2016-06-19T15:04:39.765"
     )
 
+    val input5 = JsObject(
+      "type" -> "Boat",
+      "seats" -> 12
+    )
+
     println(input.as[Item])
     println(input2.as[User])
     println(input3.as[PhoneNumber])
     println(input4.as[DateRange])
+    println(input5.as[Vehicle])
   }
 
 }
