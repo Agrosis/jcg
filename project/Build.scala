@@ -29,7 +29,7 @@ object Build extends Build {
       scalacOptions in Test       ++= Seq("-Yrangepos"),
       resolvers                   ++= Seq("snapshots", "releases").map(Resolver.sonatypeRepo),
       resolvers                   += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
-      libraryDependencies         += "com.plasmaconduit" %% "json" % "0.24.0",
+      libraryDependencies         += "com.plasmaconduit" %% "json" % "0.25.0",
       libraryDependencies         += "org.specs2" %% "specs2" % "2.3.11" % "test",
       assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
     )

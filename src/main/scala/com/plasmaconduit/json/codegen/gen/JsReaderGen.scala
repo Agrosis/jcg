@@ -95,23 +95,33 @@ object JsReaderGen {
       })
     }
 
-    private def generateModelMap(fields: List[ClassModelParameter], inner: Tree): Tree = fields match {
-      case f :: fs => {
-        val method = if (fs == Nil) "map" else "flatMap"
-        Apply(
-          Select(
-            Apply(Ident(TermName(s"${f.term}Extractor")), List(Ident(TermName("map")))),
-            TermName(method)
-          ),
-          List(
-            Function(
-              List(ValDef(Modifiers(Flag.PARAM), TermName(f.term), TypeTree(), EmptyTree)),
-              Block(List(), generateModelMap(fs, inner))
+    private def generateModelMap(fields: List[ClassModelParameter], inner: Tree): Tree = {
+      def generateModelMapWithMultipleFields(fields: List[ClassModelParameter], inner: Tree): Tree = {
+        fields match {
+          case f :: fs => {
+            val method = if (fs == Nil) "map" else "flatMap"
+            Apply(
+              Select(
+                Apply(Ident(TermName(s"${f.term}Extractor")), List(Ident(TermName("map")))),
+                TermName(method)
+              ),
+              List(
+                Function(
+                  List(ValDef(Modifiers(Flag.PARAM), TermName(f.term), TypeTree(), EmptyTree)),
+                  Block(List(), generateModelMapWithMultipleFields(fs, inner))
+                )
+              )
             )
-          )
-        )
+          }
+          case Nil => inner
+        }
       }
-      case Nil => inner
+
+      if (fields.isEmpty) {
+        Apply(Ident(TermName("Success")), List(inner))
+      } else {
+        generateModelMapWithMultipleFields(fields, inner)
+      }
     }
 
     private def generateModelAssignments(fields: List[ClassModelParameter]): List[AssignOrNamedArg] = {
