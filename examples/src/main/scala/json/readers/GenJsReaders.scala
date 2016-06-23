@@ -88,19 +88,24 @@ import com.plasmaconduit.json._;
       case object UserEmailMissingError extends UserJsReaderError;
       case object UserItemsInvalidError extends UserJsReaderError;
       case object UserItemsMissingError extends UserJsReaderError;
+      case object UserLastPurchaseInvalidError extends UserJsReaderError;
+      case object UserLastPurchaseMissingError extends UserJsReaderError;
       val idExtractor = JsonObjectValueExtractor[Int, UserJsReaderError](key = "id", missing = UserIdMissingError, invalid = ((x) => UserIdInvalidError), default = None);
       val usernameExtractor = JsonObjectValueExtractor[String, UserJsReaderError](key = "username", missing = UserUsernameMissingError, invalid = ((x) => UserUsernameInvalidError), default = None);
       val passwordExtractor = JsonObjectValueExtractor[String, UserJsReaderError](key = "password", missing = UserPasswordMissingError, invalid = ((x) => UserPasswordInvalidError), default = None);
       val emailExtractor = JsonObjectValueExtractor[String, UserJsReaderError](key = "email", missing = UserEmailMissingError, invalid = ((x) => UserEmailInvalidError), default = None);
       val itemsExtractor = JsonObjectValueExtractor[List[org.company.app.models.Item], UserJsReaderError](key = "items", missing = UserItemsMissingError, invalid = ((x) => UserItemsInvalidError), default = None);
+      val lastPurchaseExtractor = JsonObjectValueExtractor[Option[org.company.app.models.Item], UserJsReaderError](key = "lastPurchase", missing = UserLastPurchaseMissingError, invalid = ((x) => UserLastPurchaseInvalidError), default = None);
       override def read(value: JsValue): Validation[UserJsReaderError, org.company.app.models.User] = {
         value match {
           case JsObject((map @ _)) => idExtractor(map).flatMap(((id) => {
             usernameExtractor(map).flatMap(((username) => {
               passwordExtractor(map).flatMap(((password) => {
                 emailExtractor(map).flatMap(((email) => {
-                  itemsExtractor(map).map(((items) => {
-                    org.company.app.models.User(id = id, username = username, password = password, email = email, items = items)
+                  itemsExtractor(map).flatMap(((items) => {
+                    lastPurchaseExtractor(map).map(((lastPurchase) => {
+                      org.company.app.models.User(id = id, username = username, password = password, email = email, items = items, lastPurchase = lastPurchase)
+                    }))
                   }))
                 }))
               }))

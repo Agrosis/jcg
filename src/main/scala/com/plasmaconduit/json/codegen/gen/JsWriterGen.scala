@@ -18,100 +18,61 @@ object JsWriterGen {
     List(tree)
   }
 
-  private def generateJsObjectMapValues(tree: Tree, typeParameter: ClassModelParameterType): Tree = typeParameter match {
+  private def generateJsValueMap(tree: Tree, typeParameter: ClassModelParameterType, mapFunction: String): Tree = typeParameter match {
     case ClassModelParameterType("Map", innerTypeParameters) => {
       Apply(
-        Select(tree, TermName("mapValues")),
+        Select(tree, TermName(mapFunction)),
         List(
           Function(
             List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            generateJsObjectMapValues(Ident(TermName("x")), innerTypeParameters.drop(1).head)
+            Apply(Ident(TermName("JsObject")), List(generateJsValueMap(Ident(TermName("x")), innerTypeParameters.drop(1).head, "mapValues")))
           )
         )
       )
     }
     case ClassModelParameterType("List", innerTypeParameters) => {
       Apply(
-        Select(tree, TermName("mapValues")),
+        Select(tree, TermName(mapFunction)),
         List(
           Function(
             List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            generateJsArrayMap(Ident(TermName("x")), innerTypeParameters.head)
+            generateJsValueMap(Ident(TermName("x")), innerTypeParameters.head, "map")
+          )
+        )
+      )
+    }
+    case ClassModelParameterType("Option", innerTypeParameters) => {
+      Apply(
+        Select(tree, TermName(mapFunction)),
+        List(
+          Function(
+            List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
+            Apply(Ident(TermName("JsOption")), List(generateJsValueMap(Ident(TermName("x")), innerTypeParameters.drop(1).head, "map")))
           )
         )
       )
     }
     case ClassModelParameterType("Long", _) => {
       Apply(
-        Select(tree, TermName("mapValues")),
+        Select(tree, TermName(mapFunction)),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsLong")), List(Ident(TermName("x"))))))
       )
     }
     case ClassModelParameterType("String", _) => {
       Apply(
-        Select(tree, TermName("mapValues")),
+        Select(tree, TermName(mapFunction)),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsString")), List(Ident(TermName("x"))))))
       )
     }
     case ClassModelParameterType("Float", _) => {
       Apply(
-        Select(tree, TermName("mapValues")),
+        Select(tree, TermName(mapFunction)),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsFloat")), List(Ident(TermName("x"))))))
       )
     }
     case ClassModelParameterType("Boolean", _) => {
       Apply(
-        Select(tree, TermName("map")),
-        List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsBoolean")), List(Ident(TermName("x"))))))
-      )
-    }
-    case ClassModelParameterType(name, _) => tree
-  }
-
-  private def generateJsArrayMap(tree: Tree, typeParameter: ClassModelParameterType): Tree = typeParameter match {
-    case ClassModelParameterType("Map", innerTypeParameters) => {
-      Apply(
-        Select(tree, TermName("map")),
-        List(
-          Function(
-            List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            generateJsObjectMapValues(Ident(TermName("x")), innerTypeParameters.drop(1).head)
-          )
-        )
-      )
-    }
-    case ClassModelParameterType("List", innerTypeParameters) => {
-      Apply(
-        Select(tree, TermName("map")),
-        List(
-          Function(
-            List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)),
-            generateJsArrayMap(Ident(TermName("x")), innerTypeParameters.head)
-          )
-        )
-      )
-    }
-    case ClassModelParameterType("Long", _) => {
-      Apply(
-        Select(tree, TermName("map")),
-        List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsLong")), List(Ident(TermName("x"))))))
-      )
-    }
-    case ClassModelParameterType("String", _) => {
-      Apply(
-        Select(Ident(TermName("x")), TermName("map")),
-        List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsString")), List(Ident(TermName("x"))))))
-      )
-    }
-    case ClassModelParameterType("Float", _) => {
-      Apply(
-        Select(Ident(TermName("x")), TermName("map")),
-        List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsFloat")), List(Ident(TermName("x"))))))
-      )
-    }
-    case ClassModelParameterType("Boolean", _) => {
-      Apply(
-        Select(Ident(TermName("x")), TermName("map")),
+        Select(tree, TermName(mapFunction)),
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsBoolean")), List(Ident(TermName("x"))))))
       )
     }
@@ -140,10 +101,13 @@ object JsWriterGen {
         case None => {
           field.parameterType match {
             case ClassModelParameterType("Map", typeParameters) => {
-              generateJsObjectMapValues(fieldSelect, typeParameters.drop(1).head)
+              Apply(Ident(TermName("JsObject")), generateJsValueMap(fieldSelect, typeParameters.drop(1).head, "mapValues"))
             }
             case ClassModelParameterType("List", typeParameters) => {
-              generateJsArrayMap(fieldSelect, typeParameters.head)
+              generateJsValueMap(fieldSelect, typeParameters.head, "map")
+            }
+            case ClassModelParameterType("Option", typeParameters) => {
+              Apply(Ident(TermName("JsOption")), generateJsValueMap(fieldSelect, typeParameters.head, "map"))
             }
             case ClassModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
             case ClassModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
@@ -205,10 +169,13 @@ object JsWriterGen {
         case None => {
           field.parameterType match {
             case ClassModelParameterType("Map", typeParameters) => {
-              Apply(Ident(TermName("JsObject")), List(generateJsObjectMapValues(fieldSelect, typeParameters.drop(1).head)))
+              Apply(Ident(TermName("JsObject")), List(generateJsValueMap(fieldSelect, typeParameters.drop(1).head, "mapValues")))
             }
             case ClassModelParameterType("List", typeParameters) => {
-              Apply(Ident(TermName("JsArray")), List(generateJsArrayMap(fieldSelect, typeParameters.head)))
+              generateJsValueMap(fieldSelect, typeParameters.head, "map")
+            }
+            case ClassModelParameterType("Option", typeParameters) => {
+              Apply(Ident(TermName("JsOption")), List(generateJsValueMap(fieldSelect, typeParameters.drop(1).head, "map")))
             }
             case ClassModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
             case ClassModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))

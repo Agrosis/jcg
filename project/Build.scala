@@ -18,7 +18,7 @@ object Build extends Build {
     .settings(
       name                        := "jcg",
       organization                := "com.plasmaconduit",
-      version                     := "0.4.7",
+      version                     := "0.4.8",
       scalaVersion                := "2.11.8",
       ivyScala                    := ivyScala.value map { _.copy(overrideScalaVersion = true) },
       licenses                    += ("MIT", url("http://opensource.org/licenses/MIT")),
@@ -29,7 +29,7 @@ object Build extends Build {
       scalacOptions in Test       ++= Seq("-Yrangepos"),
       resolvers                   ++= Seq("snapshots", "releases").map(Resolver.sonatypeRepo),
       resolvers                   += "Plasma Conduit Repository" at "http://dl.bintray.com/plasmaconduit/releases",
-      libraryDependencies         += "com.plasmaconduit" %% "json" % "0.23.0",
+      libraryDependencies         += "com.plasmaconduit" %% "json" % "0.24.0",
       libraryDependencies         += "org.specs2" %% "specs2" % "2.3.11" % "test",
       assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
     )
@@ -38,14 +38,14 @@ object Build extends Build {
     .settings(
       name                  := "jcg-examples",
       organization          := "com.plasmaconduit",
-      version               := "0.4.7",
+      version               := "0.4.8",
       scalaVersion          := "2.11.8",
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",
       scalacOptions         += "-deprecation",
       scalacOptions         += "-unchecked",
       scalacOptions in Test ++= Seq("-Yrangepos"),
-      libraryDependencies   += "com.plasmaconduit" %% "json" % "0.23.0",
+      libraryDependencies   += "com.plasmaconduit" %% "json" % "0.24.0",
       libraryDependencies   += "org.specs2" %% "specs2" % "2.3.11" % "test"
     )
     .aggregate(traits)

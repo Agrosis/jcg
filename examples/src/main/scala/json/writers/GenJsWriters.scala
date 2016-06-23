@@ -34,7 +34,7 @@ package json.writers {
     };
     object UserJsWriter extends JsWriter[org.company.app.models.User] {
       override def write(m: org.company.app.models.User): JsValue = {
-        JsObject(Tuple2("id", m.id), Tuple2("username", JsString(m.username)), Tuple2("email", JsString(m.email)), Tuple2("items", m.items))
+        JsObject(Tuple2("id", m.id), Tuple2("username", JsString(m.username)), Tuple2("email", JsString(m.email)), Tuple2("items", m.items), Tuple2("lastPurchase", JsOption(m.lastPurchase)))
       }
     };
     object VehicleJsWriter extends JsWriter[org.company.app.models.Vehicle] {

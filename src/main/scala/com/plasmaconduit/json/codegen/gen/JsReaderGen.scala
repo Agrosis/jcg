@@ -20,10 +20,13 @@ object JsReaderGen {
 
   private def getClassType(fieldType: ClassModelParameterType, termPackageMap: Map[String, String]): Tree = fieldType match {
     case ClassModelParameterType("Map", innerTypeParameters) => {
-      TypeApply(Ident(TermName("Map")), List(getClassType(innerTypeParameters.head, termPackageMap: Map[String, String]), getClassType(innerTypeParameters.drop(1).head, termPackageMap: Map[String, String])))
+      TypeApply(Ident(TermName("Map")), List(getClassType(innerTypeParameters.head, termPackageMap), getClassType(innerTypeParameters.drop(1).head, termPackageMap)))
     }
     case ClassModelParameterType("List", innerTypeParameters) => {
-      TypeApply(Ident(TermName("List")), List(getClassType(innerTypeParameters.head, termPackageMap: Map[String, String])))
+      TypeApply(Ident(TermName("List")), List(getClassType(innerTypeParameters.head, termPackageMap)))
+    }
+    case ClassModelParameterType("Option", innerTypeParameters) => {
+      TypeApply(Ident(TermName("Option")), List(getClassType(innerTypeParameters.head, termPackageMap)))
     }
     case ClassModelParameterType("Long", _) => Ident(TermName("Long"))
     case ClassModelParameterType("String", _) => Ident(TermName("String"))
