@@ -45,7 +45,7 @@ object Main {
     )
 
     val input5 = JsObject(
-      "type" -> "Boat",
+      "vehicleType" -> "boat",
       "seats" -> 12
     )
 

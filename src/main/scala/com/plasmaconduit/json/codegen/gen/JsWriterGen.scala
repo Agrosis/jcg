@@ -76,7 +76,9 @@ object JsWriterGen {
         List(Function(List(ValDef(Modifiers(Flag.PARAM), TermName("x"), TypeTree(), EmptyTree)), Apply(Ident(TermName("JsBoolean")), List(Ident(TermName("x"))))))
       )
     }
-    case ClassModelParameterType(name, _) => tree
+    case ClassModelParameterType(name, _) => {
+      tree
+    }
   }
 
   private def generateCustomWriters(customWriters: Map[String, Tree]): List[Tree] = {
@@ -85,7 +87,7 @@ object JsWriterGen {
     }
   }
 
-  def JsWriterObjectRepGen(ignore: List[String], isChild: Boolean) = new JsWriterGen[ClassModel] {
+  def JsWriterObjectRepGen(ignore: List[String], parent: Option[TraitModel]) = new JsWriterGen[ClassModel] {
     private def generateFieldOutput(field: ClassModelParameter, refName: String, customWriters: Map[String, Tree]): Tree = {
       val fieldName = field.term
       val fieldWriterName = s"${fieldName}Writer"
@@ -109,11 +111,21 @@ object JsWriterGen {
             case ClassModelParameterType("Option", typeParameters) => {
               Apply(Ident(TermName("JsOption")), generateJsValueMap(fieldSelect, typeParameters.head, "map"))
             }
-            case ClassModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
-            case ClassModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
-            case ClassModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
-            case ClassModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
-            case ClassModelParameterType(name, _) => fieldSelect
+            case ClassModelParameterType("Long", _) => {
+              Apply(Ident(TermName("JsLong")), List(fieldSelect))
+            }
+            case ClassModelParameterType("String", _) => {
+              Apply(Ident(TermName("JsString")), List(fieldSelect))
+            }
+            case ClassModelParameterType("Float", _) => {
+              Apply(Ident(TermName("JsFloat")), List(fieldSelect))
+            }
+            case ClassModelParameterType("Boolean", _) => {
+              Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
+            }
+            case ClassModelParameterType(name, _) => {
+              fieldSelect
+            }
           }
         }
       }
@@ -124,9 +136,14 @@ object JsWriterGen {
     override def generate(model: ClassModel): Tree = {
       val fieldMappings = model.parameters.filter(p => !ignore.contains(p.term)).map(field => generateFieldOutput(field, "m", model.customWriters))
 
-      val withType =
-        if (isChild) fieldMappings ++ Apply(Ident(TermName("Tuple2")), List(Literal(Constant("type")), Literal(Constant(model.name))))
-        else fieldMappings
+      val withType = parent match {
+        case Some(tm) => {
+          fieldMappings ++ Apply(Ident(TermName("Tuple2")), List(Literal(Constant(tm.typeField)), Literal(Constant(model.typeName.getOrElse(model.name)))))
+        }
+        case None => {
+          fieldMappings
+        }
+      }
 
       ModuleDef(
         Modifiers(),
@@ -177,11 +194,21 @@ object JsWriterGen {
             case ClassModelParameterType("Option", typeParameters) => {
               Apply(Ident(TermName("JsOption")), List(generateJsValueMap(fieldSelect, typeParameters.drop(1).head, "map")))
             }
-            case ClassModelParameterType("Long", _) => Apply(Ident(TermName("JsLong")), List(fieldSelect))
-            case ClassModelParameterType("String", _) => Apply(Ident(TermName("JsString")), List(fieldSelect))
-            case ClassModelParameterType("Float", _) => Apply(Ident(TermName("JsFloat")), List(fieldSelect))
-            case ClassModelParameterType("Boolean", _) => Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
-            case ClassModelParameterType(name, _) => fieldSelect
+            case ClassModelParameterType("Long", _) => {
+              Apply(Ident(TermName("JsLong")), List(fieldSelect))
+            }
+            case ClassModelParameterType("String", _) => {
+              Apply(Ident(TermName("JsString")), List(fieldSelect))
+            }
+            case ClassModelParameterType("Float", _) => {
+              Apply(Ident(TermName("JsFloat")), List(fieldSelect))
+            }
+            case ClassModelParameterType("Boolean", _) => {
+              Apply(Ident(TermName("JsBoolean")), List(fieldSelect))
+            }
+            case ClassModelParameterType(name, _) => {
+              fieldSelect
+            }
           }
         }
       }

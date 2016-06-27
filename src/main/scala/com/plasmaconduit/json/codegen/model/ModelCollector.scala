@@ -90,6 +90,22 @@ object ModelCollector {
     }
   }
 
+  private def getTypeField(ast: List[Tree]): String = {
+    ast match {
+      case ValDef(modifiers, TermName("typeField"), typeTree, Literal(Constant(lit: String))) :: xs => lit
+      case x :: xs => getTypeField(xs)
+      case Nil => "type"
+    }
+  }
+
+  private def getTypeName(ast: List[Tree]): Option[String] = {
+    ast match {
+      case ValDef(modifiers, TermName("typeName"), typeTree, Literal(Constant(lit: String))) :: xs => Some(lit)
+      case x :: xs => getTypeName(xs)
+      case Nil => None
+    }
+  }
+
   private def traverseForModels(ast: Tree, packageName: String): List[Model] = {
     ast match {
       case Block(body, expr) => {
@@ -104,7 +120,8 @@ object ModelCollector {
             TraitModel(
               name = name,
               packageName = packageName,
-              parents = getParents(parents)
+              parents = getParents(parents),
+              typeField = getTypeField(body)
             )
           )
         } else {
@@ -119,7 +136,8 @@ object ModelCollector {
               genReaderRep = getRepresentation(body, "readerRep"),
               genWriterRep = getRepresentation(body, "writerRep"),
               customReaders = getCustomFields(body, "Reader"),
-              customWriters = getCustomFields(body, "Writer")
+              customWriters = getCustomFields(body, "Writer"),
+              typeName = getTypeName(body)
             )
           )
         }
@@ -130,16 +148,6 @@ object ModelCollector {
 
   def generateModelsFor(code: String): List[Model] = {
     val tb = runtimeMirror(getClass.getClassLoader).mkToolBox()
-
-//    println((
-//      Match(
-//        Ident(TermName("x")),
-//        List(
-//          CaseDef(Bind(TermName("i"), Typed(Ident(termNames.WILDCARD), Ident(TypeName("Something")))), EmptyTree, Literal(Constant(3))),
-//          CaseDef(Bind(TermName("i"), Typed(Ident(termNames.WILDCARD), Ident(TypeName("Thing")))), EmptyTree, Literal(Constant(7)))
-//        )
-//      )
-//    ))
 
     "^(\\s+)?package (.*)".r.findFirstIn(code).map(_.split(" ")(1)) match {
       case Some(packageName) => {

@@ -14,7 +14,8 @@ sealed trait Model {
 
 final case class TraitModel(name: String,
                             packageName: String,
-                            parents: List[String]) extends Model
+                            parents: List[String],
+                            typeField: String) extends Model
 
 final case class ClassModel(name: String,
                             packageName: String,
@@ -24,7 +25,8 @@ final case class ClassModel(name: String,
                             genReaderRep: Option[ModelRep],
                             genWriterRep: Option[ModelRep],
                             customReaders: Map[String, Tree],
-                            customWriters: Map[String, Tree]) extends Model
+                            customWriters: Map[String, Tree],
+                            typeName: Option[String]) extends Model
 
 final case class ClassModelParameter(term: String, parameterType: ClassModelParameterType)
 final case class ClassModelParameterType(value: String, typeParameters: List[ClassModelParameterType])

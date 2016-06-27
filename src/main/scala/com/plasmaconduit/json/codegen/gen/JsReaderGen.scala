@@ -257,7 +257,7 @@ object JsReaderGen {
     private def generateCases(modelName: String, children: List[ClassModel]): List[CaseDef] = {
       children.map(c => {
         CaseDef(
-          Literal(Constant(c.name)),
+          Literal(Constant(c.typeName.getOrElse(c.name))),
           EmptyTree,
           Apply(
             Select(
@@ -306,7 +306,7 @@ object JsReaderGen {
               Apply(
                 TypeApply(Ident(TermName("JsonObjectValueExtractor")), List(Ident(TermName("String")), modelJsReaderError)),
                 List(
-                  AssignOrNamedArg(Ident(TermName("key")), Literal(Constant("type"))),
+                  AssignOrNamedArg(Ident(TermName("key")), Literal(Constant(model.typeField))),
                   AssignOrNamedArg(Ident(TermName("missing")), Ident(TermName(s"${modelName}TypeMissingError"))),
                   AssignOrNamedArg(Ident(TermName("invalid")), Function(
                     List(ValDef(Modifiers(Flag.PARAM), TermName("e"), TypeTree(), EmptyTree)),

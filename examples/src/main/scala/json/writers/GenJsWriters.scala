@@ -48,17 +48,17 @@ package json.writers {
     };
     object CarJsWriter extends JsWriter[org.company.app.models.Car] {
       override def write(m: org.company.app.models.Car): JsValue = {
-        JsObject(Tuple2("seats", m.seats), Tuple2("type", "Car"))
+        JsObject(Tuple2("seats", m.seats), Tuple2("vehicleType", "car"))
       }
     };
     object TruckJsWriter extends JsWriter[org.company.app.models.Truck] {
       override def write(m: org.company.app.models.Truck): JsValue = {
-        JsObject(Tuple2("space", m.space), Tuple2("type", "Truck"))
+        JsObject(Tuple2("space", m.space), Tuple2("vehicleType", "truck"))
       }
     };
     object BoatJsWriter extends JsWriter[org.company.app.models.Boat] {
       override def write(m: org.company.app.models.Boat): JsValue = {
-        JsObject(Tuple2("seats", m.seats), Tuple2("type", "Boat"))
+        JsObject(Tuple2("seats", m.seats), Tuple2("vehicleType", "boat"))
       }
     }
   }

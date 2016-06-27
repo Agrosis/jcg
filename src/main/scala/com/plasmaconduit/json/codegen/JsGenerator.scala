@@ -20,7 +20,7 @@ object JsGenerator {
   def generateJsWriter(model: Model, traitModels: List[TraitModel], classModels: List[ClassModel], termPackageMap: Map[String, String]): Tree = {
     model match {
       case cm: ClassModel => {
-        val isChild = cm.parents.foldLeft(false)((b, a) => b || traitModels.exists(_.name == a))
+        val isChild = cm.parents.foldLeft(None: Option[TraitModel])((b, a) => b.orElse(traitModels.find(_.name == a)))
         cm.genWriterRep match {
           case Some(ModelObjectRep(ignore)) => JsWriterGen.JsWriterObjectRepGen(ignore, isChild).generate(cm)
           case Some(ModelParameterRep) => JsWriterGen.JsWriterParameterRepGen().generate(cm)
