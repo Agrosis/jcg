@@ -56,7 +56,7 @@ object Build extends Build {
     .settings(
       name                  := "jcg-traits",
       organization          := "com.plasmaconduit",
-      version               := "0.4.3",
+      version               := "0.4.4",
       crossScalaVersions    := Seq("2.10.4", "2.11.8"),
       licenses              += ("MIT", url("http://opensource.org/licenses/MIT")),
       scalacOptions         += "-feature",

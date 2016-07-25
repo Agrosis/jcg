@@ -40,9 +40,9 @@ object ModelCollector {
     case Nil => Nil
   }
 
-  private def getDefaultParameters(ast: List[Tree]): Map[String, Any] = {
-    def find(defs: List[ValDef]): List[(String, Any)] = defs match {
-      case ValDef(modifiers, TermName(termName), typeName, Literal(Constant(defaultValue))) :: xs if modifiers.hasFlag(Flag.DEFAULTPARAM) => {
+  private def getDefaultParameters(ast: List[Tree]): Map[String, Tree] = {
+    def find(defs: List[ValDef]): List[(String, Tree)] = defs match {
+      case ValDef(modifiers, TermName(termName), typeName, defaultValue) :: xs if modifiers.hasFlag(Flag.DEFAULTPARAM) => {
         (termName, defaultValue) :: find(xs)
       }
       case x :: xs => find(xs)

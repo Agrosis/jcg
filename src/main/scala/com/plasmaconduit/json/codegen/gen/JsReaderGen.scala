@@ -56,14 +56,14 @@ object JsReaderGen {
       })
     }
 
-    private def generateDefaultValue(parameter: ClassModelParameter, defaultValues: Map[String, Any]): Tree = {
+    private def generateDefaultValue(parameter: ClassModelParameter, defaultValues: Map[String, Tree]): Tree = {
       defaultValues.get(parameter.term) match {
-        case Some(value) => Apply(Ident(TermName("Some")), List(Literal(Constant(value))))
+        case Some(tree) => Apply(Ident(TermName("Some")), List(tree))
         case None => Ident(TermName("None"))
       }
     }
 
-    private def generateFieldExtractors(className: String, fields: List[ClassModelParameter], defaultValues: Map[String, Any], customReaders: Map[String, Tree], errorType: Ident): List[Tree] = {
+    private def generateFieldExtractors(className: String, fields: List[ClassModelParameter], defaultValues: Map[String, Tree], customReaders: Map[String, Tree], errorType: Ident): List[Tree] = {
       fields.map(f => {
         val modelType = getClassType(f.parameterType, termPackageMap)
         val fieldReaderName = s"${f.term}Reader"
